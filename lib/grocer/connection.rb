@@ -36,6 +36,10 @@ module Grocer
       @ssl_connection.select timeout
     end
 
+    def pending
+      @ssl_connection.pending
+    end
+
     def close
       destroy_connection
     end
