@@ -7,5 +7,9 @@ module Grocer
     def push(notification)
       @connection.write(notification.to_bytes)
     end
+    def has_errors?
+      @connection.pending > 0
+    end
+
   end
 end
