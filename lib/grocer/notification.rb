@@ -40,6 +40,23 @@ module Grocer
       ].pack('CNNnH64nA*')
     end
 
+    def payload_too_large?
+      encoded_payload.bytesize > MAX_PAYLOAD_SIZE
+    end
+
+    def truncate field
+      field_val = send(field)
+      field_size = field_val.bytesize
+      payload_size = encoded_payload.bytesize
+      max_field_size = 256 - (payload_size - field_size)
+      if max_field_size > 0
+        field_val = field_val.truncate(max_field_size)
+        send(field.to_s + "=", field_val)
+      else
+        send(field.to_s + "=", nil)
+      end
+    end
+
     private
 
     def payload_too_large?
@@ -52,7 +69,7 @@ module Grocer
     end
 
     def encoded_payload
-      JSON.dump(payload_hash)
+      @encoded_payload ||= JSON.dump(payload_hash)
     end
 
     def payload_hash
@@ -74,6 +91,21 @@ module Grocer
 
     def device_token_length
       32
+    end
+
+    def alert= alert
+      @alert = alert
+      @encoded_payload = nil
+    end
+
+    def badge= badge
+      @badge = badge
+      @encoded_payload = nil
+    end
+
+    def sound= sound
+      @sound = sound
+      @encoded_payload = nil
     end
   end
 end
