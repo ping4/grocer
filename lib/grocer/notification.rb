@@ -16,7 +16,7 @@ module Grocer
     #           :badge        - The Integer to be sent as the badge portion of the payload. (optional)
     #           :sound        - The String representing the sound portion of the payload. (optional)
     #           :expiry       - The Integer representing UNIX epoch date sent to APNS as the notification expiry. (default: 0)
-    #           :identifier   - The arbitrary value sent to APNS to uniquely this notification. (default: 0)
+    #           :identifier   - The arbitrary Integer sent to APNS to uniquely this notification. (default: 0)
     def initialize(payload = {})
       @identifier = 0
 
@@ -44,24 +44,35 @@ module Grocer
       encoded_payload.bytesize > MAX_PAYLOAD_SIZE
     end
 
-    def truncate field
+    def truncate(field)
       field_val = send(field)
       field_size = field_val.bytesize
       payload_size = encoded_payload.bytesize
-      max_field_size = 256 - (payload_size - field_size)
+      max_field_size = MAX_PAYLOAD_SIZE - (payload_size - field_size)
       if max_field_size > 0
-        field_val = field_val.truncate(max_field_size)
+        field_val = field_val[0..max_field_size]
         send(field.to_s + "=", field_val)
       else
         send(field.to_s + "=", nil)
       end
     end
 
-    private
-
-    def payload_too_large?
-      encoded_payload.bytesize > MAX_PAYLOAD_SIZE
+    def alert=(alert)
+      @alert = alert
+      @encoded_payload = nil
     end
+
+    def badge=(badge)
+      @badge = badge
+      @encoded_payload = nil
+    end
+
+    def sound=(sound)
+      @sound = sound
+      @encoded_payload = nil
+    end
+
+    private
 
     def validate_payload
       fail NoPayloadError unless alert || badge
@@ -91,21 +102,6 @@ module Grocer
 
     def device_token_length
       32
-    end
-
-    def alert= alert
-      @alert = alert
-      @encoded_payload = nil
-    end
-
-    def badge= badge
-      @badge = badge
-      @encoded_payload = nil
-    end
-
-    def sound= sound
-      @sound = sound
-      @encoded_payload = nil
     end
   end
 end

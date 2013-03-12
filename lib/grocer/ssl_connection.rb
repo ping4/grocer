@@ -56,7 +56,7 @@ module Grocer
       connect
     end
 
-    def select timeout
+    def select(timeout)
       IO.select([@ssl], [], [@ssl], timeout)
     end
 

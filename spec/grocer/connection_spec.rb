@@ -75,6 +75,22 @@ describe Grocer::Connection do
       subject.read(42, 'IO')
       ssl.should have_received(:read).with(42, 'IO')
     end
+
+    it "#select" do
+      subject.select(55)
+      ssl.should have_received(:select).with(55)
+    end
+
+    it "#pending" do
+      subject.pending
+      ssl.should have_received(:pending)
+    end
+
+    it "#close" do
+      subject.stubs(:destroy_connection)
+      subject.close
+      subject.should have_received(:destroy_connection)
+    end
   end
 
   context 'a closed SSLConnection' do
@@ -112,6 +128,13 @@ describe Grocer::Connection do
         ssl.stubs(:read).raises(error).then.raises(error)
         -> { subject.read }.should raise_error(error)
       end
+    end
+
+    it "clears the connection between retries" do
+      subject.stubs(:destroy_connection)
+      ssl.stubs(:write).raises(Errno::EPIPE).then.returns(42)
+      subject.write('abc123')
+      subject.should have_received(:destroy_connection)
     end
   end
 end

@@ -75,6 +75,18 @@ describe Grocer::SSLConnection do
       subject.connect
       OpenSSL::SSL::SSLSocket.should have_received(:new).with(mock_socket, anything)
     end
+
+    it 'reconnects' do
+      #make sure they are available
+      subject.connect
+
+      subject.reconnect
+      #calls close
+      mock_ssl.should have_received(:close)
+      mock_socket.should have_received(:close)
+      #calls connect (a second time, once for connect, a second time for the reconnect)
+      OpenSSL::SSL::SSLSocket.should have_received(:new).with(mock_socket, anything).times(2)
+    end
   end
 
   describe 'writing data' do

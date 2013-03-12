@@ -29,12 +29,12 @@ module Grocer
       ssl.connect unless ssl.connected?
     end
 
-    def select timeout
-      @ssl_connection.select timeout
+    def select(timeout)
+      ssl.select(timeout)
     end
 
     def pending
-      @ssl_connection.pending
+      ssl.pending
     end
 
     def close

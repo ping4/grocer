@@ -14,4 +14,16 @@ describe Grocer::Pusher do
       connection.should have_received(:write).with('abc123')
     end
   end
+
+  context 'delegation' do
+    it "#select" do
+      subject.select(55)
+      connection.should have_received(:select).with(55)
+    end
+
+    it "#close" do
+      subject.close
+      connection.should have_received(:close)
+    end
+  end
 end
