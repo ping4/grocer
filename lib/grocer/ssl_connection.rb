@@ -24,7 +24,6 @@ module Grocer
       context = OpenSSL::SSL::SSLContext.new
 
       if certificate
-
         if certificate.respond_to?(:read)
           cert_data = certificate.read
           certificate.rewind if certificate.respond_to?(:rewind)
@@ -44,6 +43,7 @@ module Grocer
     end
 
     def disconnect
+      puts "disconnecting"
       @ssl.close if @ssl
       @ssl = nil
 
@@ -52,13 +52,19 @@ module Grocer
     end
 
     def reconnect
+      puts "reconnecting"
       disconnect
       connect
     end
 
+    #passing in a timeout will ensure that we have waited for all the reads errors to surface
     def select(timeout)
-      IO.select([@ssl], [], [@ssl], timeout)
+      return unless connected?
+      if timeout
+        IO.select([@ssl], [], [@ssl], timeout)
+      else
+        IO.select([@ssl], [@ssl], [@ssl], 1)
+      end
     end
-
   end
 end

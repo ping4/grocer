@@ -37,6 +37,10 @@ module Grocer
       ssl.pending
     end
 
+    def connected?
+      ssl.connected?
+    end
+
     def close
       destroy_connection
     end

@@ -8,10 +8,10 @@ module Grocer
       @connection.write(notification.to_bytes)
     end
 
-    def read_errors(timeout = 0.5)
+    def read_errors(timeout = nil)
       errors = []
-      read, write, error = select(timeout)
-      if error && error.first
+      read, write, err = select(timeout)
+      if err && err.first
         errors << {identifier: 'unexpected error while reading errors'}
       end
       if read && read.first
@@ -28,8 +28,8 @@ module Grocer
       @connection.select(timeout)
     end
 
-    def has_errors?
-      @connection.pending > 0
+    def connect
+      @connection.connect
     end
 
     def close
