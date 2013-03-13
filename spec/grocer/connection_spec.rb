@@ -93,6 +93,11 @@ describe Grocer::Connection do
     end
   end
 
+  it "#connected?" do
+    subject.connected?
+    ssl.should have_received(:connected?)
+  end
+
   context 'a closed SSLConnection' do
     before do
       ssl.stubs(:connected?).returns(false)

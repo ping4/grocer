@@ -43,7 +43,6 @@ module Grocer
     end
 
     def disconnect
-      puts "disconnecting"
       @ssl.close if @ssl
       @ssl = nil
 
@@ -52,7 +51,6 @@ module Grocer
     end
 
     def reconnect
-      puts "reconnecting"
       disconnect
       connect
     end
