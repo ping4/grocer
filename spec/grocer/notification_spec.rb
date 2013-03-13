@@ -61,20 +61,5 @@ describe Grocer::Notification do
         -> { notification.to_bytes }.should raise_error(Grocer::PayloadTooLargeError)
       end
     end
-
-    context 'truncate' do
-      let(:payload_options) { { alert: 'a'*300, badge: 2, sound: 'aaaaa.aiff' } }
-      it 'truncates alert body' do
-        notification.truncate(:alert)
-        # {"aps":{"alert":"a","badge":2,"sound":"aaaaa.aiff"}}
-        # base message: 19 bytes for {"aps":{"alert":""}
-        # extra parts:  31 bytes for ,"badge":2,"sound":"aaaaa.aiff"
-        notification.alert.length.should == 256 - 19 - 31
-      end
-      it 'gives up if there is no room' do
-        notification.truncate(:sound)
-        notification.sound.should be_nil
-      end
-    end
   end
 end
