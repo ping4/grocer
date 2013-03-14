@@ -5,6 +5,19 @@ module Grocer
 
     def_delegators :@connection, :connect, :close
 
+    ERROR_CODES={
+      0 => "No errors encountered",
+      1 => "Processing error",
+      2 => "Missing device token",
+      3 => "Missing topic",
+      4 => "Missing payload",
+      5 => "Invalid token size",
+      6 => "Invalid topic size",
+      7 => "Invalid payload size",
+      8 => "Invalid token",
+      255 => "None (unknown)"
+    }
+
     def initialize(connection)
       @connection = connection
     end
@@ -47,7 +60,7 @@ module Grocer
         if error = @connection.read(6)
           close
           e = error.unpack("c1c1N1")
-          return { identifier: e[2], error_code: e[1] }
+          return { identifier: e[2], error_code: e[1], error_text: ERROR_CODES[e[1]] }
         end
       end
     end
