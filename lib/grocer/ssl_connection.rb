@@ -50,6 +50,8 @@ module Grocer
       @sock = nil
     end
 
+    alias_method :close, :disconnect
+
     def reconnect
       disconnect
       connect

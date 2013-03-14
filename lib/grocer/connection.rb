@@ -1,9 +1,13 @@
 require 'grocer'
 require 'grocer/ssl_connection'
+require 'forwardable'
 
 module Grocer
   class Connection
+    extend Forwardable
     attr_reader :certificate, :passphrase, :gateway, :port, :retries
+
+    def_delegators :ssl, :select, :pending, :connected?
 
     def initialize(options = {})
       @certificate = options.fetch(:certificate) { nil }
@@ -31,14 +35,6 @@ module Grocer
 
     def select(timeout)
       ssl.select(timeout)
-    end
-
-    def pending
-      ssl.pending
-    end
-
-    def connected?
-      ssl.connected?
     end
 
     def close
