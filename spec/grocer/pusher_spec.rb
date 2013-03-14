@@ -32,7 +32,7 @@ describe Grocer::Pusher do
       connection.expects(:select).returns([[connection],[connection]])
       connection.expects(:read).returns([8, 6, 105].pack("ccN"))
       connection.expects(:close)
-      subject.read_errors.should == {identifier: 105, error_code: 6}
+      subject.read_errors.should include(identifier: 105, error_code: 6)
     end
   end
 
