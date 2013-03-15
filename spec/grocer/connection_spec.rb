@@ -75,6 +75,11 @@ describe Grocer::Connection do
       subject.read(42, 'IO')
       ssl.should have_received(:read).with(42, 'IO')
     end
+
+    it "#close" do
+      subject.close
+      ssl.should have_received(:disconnect)
+    end
   end
 
   context 'a closed SSLConnection' do
@@ -113,5 +118,11 @@ describe Grocer::Connection do
         -> { subject.read }.should raise_error(error)
       end
     end
+  end
+
+  it "clears the connection between retries" do
+    ssl.stubs(:write).raises(Errno::EPIPE).then.returns(42)
+    subject.write('abc123')
+    ssl.should have_received(:disconnect)
   end
 end
