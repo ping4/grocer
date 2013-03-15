@@ -1,9 +1,13 @@
 require 'grocer'
 require 'grocer/ssl_connection'
+require 'forwardable'
 
 module Grocer
   class Connection
+    extend Forwardable
     attr_reader :certificate, :passphrase, :gateway, :port, :retries
+
+    def_delegators :ssl, :connect, :disconnect
 
     def initialize(options = {})
       @certificate = options.fetch(:certificate) { nil }
@@ -25,9 +29,7 @@ module Grocer
       end
     end
 
-    def connect
-      ssl.connect unless ssl.connected?
-    end
+    alias_method :close, :disconnect
 
     private
 
@@ -40,13 +42,6 @@ module Grocer
                                 passphrase: passphrase,
                                 gateway: gateway,
                                 port: port)
-    end
-
-    def destroy_connection
-      return unless @ssl_connection
-
-      @ssl_connection.disconnect rescue nil
-      @ssl_connection = nil
     end
 
     def with_connection
@@ -62,7 +57,7 @@ module Grocer
 
         raise unless attempts < retries
 
-        destroy_connection
+        disconnect
         attempts += 1
         retry
       end

@@ -21,6 +21,7 @@ module Grocer
     end
 
     def connect
+      return if connected?
       context = OpenSSL::SSL::SSLContext.new
 
       if certificate
@@ -50,6 +51,7 @@ module Grocer
       @sock.close if @sock
       @sock = nil
     end
+    alias_method :close, :disconnect
 
     def reconnect
       disconnect

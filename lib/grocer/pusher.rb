@@ -1,5 +1,11 @@
+require 'forwardable'
+
 module Grocer
   class Pusher
+    extend Forwardable
+
+    def_delegators :@connection, :connect, :close
+
     def initialize(connection)
       @connection = connection
     end
