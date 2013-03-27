@@ -16,7 +16,7 @@ describe Grocer::Pusher do
   end
 
   describe "with error available" do
-    let(:connection) { stub_everything('connection', :can_read? => true, :read => [8, 6, 105].pack("ccN")) }
+    let(:connection) { stub_everything('connection', :can_read? => true, :read_if_connected => [8, 6, 105].pack("ccN")) }
     it "should return errors from read_errors" do
       error=subject.read_errors
       error.should_not be_nil
@@ -52,7 +52,7 @@ describe Grocer::Pusher do
   describe "with no error available" do
     let(:connection) { stub_everything('connection', :can_read? => false) }
     it "should return nothing from read_errors" do
-      connection.expects(:read).never
+      connection.expects(:read_if_connected).never
       error=subject.read_errors
       error.should be_nil
     end
@@ -62,7 +62,7 @@ describe Grocer::Pusher do
     # NOTE: 2 is the identifier we are assuming is assigned to bad_notification.identifier
     it "#resend push for notification errors" do
       # send 1 , 2 , 3, 4, (error on 2 [notifications[1]]), 5 ; resend 3, 4
-      connection.expects(:read).returns([8, 6, 2].pack('ccN'))
+      connection.expects(:read_if_connected).returns([8, 6, 2].pack('ccN'))
       connection.expects(:can_read?).times(7).then.returns(false).then.returns(false).then.returns(false).then.returns(true).then.returns(false)
 
       notifications = 5.times.map { |i| Grocer::Notification.new(alert: "alert text #{i}") }

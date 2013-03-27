@@ -18,7 +18,10 @@ module Grocer
 
     def read_errors(timeout=0.0)
       if @connection.can_read?(timeout)
-        ErrorResponse.new(@connection.read(6)).tap { close }
+        response = @connection.read_if_connected(6)
+        close
+        #NOTE: if response.nil? then we probably dropped an error on the floor
+        ErrorResponse.new(response) if response
       end
     end
 

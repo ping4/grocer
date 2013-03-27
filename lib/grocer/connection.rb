@@ -23,6 +23,11 @@ module Grocer
       end
     end
 
+    # we are reading off a possibly closed connection - don't open it
+    def read_if_connected(size = nil, buf = nil)
+      ssl.read(size, buf) if ssl && ssl.connected?
+    end
+
     def write(content)
       with_connection do
         ssl.write(content)

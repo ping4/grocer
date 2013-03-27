@@ -76,6 +76,11 @@ describe Grocer::Connection do
       ssl.should have_received(:read).with(42, 'IO')
     end
 
+    it '#read_if_connected delegates to open SSLConnection' do
+      subject.read_if_connected(42, 'IO')
+      ssl.should have_received(:read).with(42, 'IO')
+    end
+
     it "#close" do
       subject.close
       ssl.should have_received(:disconnect)
@@ -97,6 +102,12 @@ describe Grocer::Connection do
       subject.read(42, 'IO')
       ssl.should have_received(:connect)
       ssl.should have_received(:read).with(42, 'IO')
+    end
+
+    it '#read_if_connected doesnt connect a closed connection' do
+      subject.read_if_connected(42, 'IO')
+      ssl.should have_received(:connect).never
+      ssl.should have_received(:read).never
     end
   end
 
