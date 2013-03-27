@@ -27,7 +27,7 @@ describe Grocer::Pusher do
     describe "with previously sent notifications" do
       let(:prev_notification) { stub(:to_bytes => 'abc123', :identifier= => nil, :identifier => 105) }
       before {
-        subject.send(:remember_notification, prev_notification)
+        subject.send(:remember_notification, prev_notification) #this is one that is causing the error
       }
 
       it "should return previous errors" do
@@ -39,6 +39,15 @@ describe Grocer::Pusher do
         notifications.should == [notification]
 
         subject.should_not be_remembered_notifications
+      end
+
+      it "should check_and_retry and re-pushes notifications" do
+        connection.expects(:can_read?).times(3).returns(false).then.returns(true).then.returns(false)
+        subject.expects(:push).with(notification).twice
+        subject.push_and_check(notification)
+
+        error=subject.check_and_retry
+        error.should_not be_empty
       end
 
       it "should clear previous errors" do
@@ -55,6 +64,13 @@ describe Grocer::Pusher do
       connection.expects(:read_if_connected).never
       error=subject.read_errors
       error.should be_nil
+    end
+
+    it "should check_and_retry and return notifications to send" do
+      subject.expects(:push).never
+
+      error=subject.check_and_retry
+      error.should be_empty
     end
   end
 

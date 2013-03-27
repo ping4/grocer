@@ -48,10 +48,7 @@ module Grocer
       if response = read_errors
         errors << response
         notifications=[]
-        notification_to_retry(response).each do |n|
-          notifications << n
-        end
-        push_and_retry(notifications, errors)
+        push_and_retry(notification_to_retry(response), errors)
       end
       errors
     end
