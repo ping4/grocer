@@ -2,7 +2,7 @@ require 'spec_helper'
 require 'grocer/pusher'
 
 describe Grocer::Pusher do
-  let(:connection) { stub_everything }
+  let(:connection) { stub('connection', write: nil, select: nil, close: nil, connect: nil, read_nonblock: nil) }
 
   subject { described_class.new(connection) }
 
@@ -30,7 +30,7 @@ describe Grocer::Pusher do
   context "with error" do
     it "#read_errors" do
       connection.expects(:select).returns([[connection],[connection]])
-      connection.expects(:read).returns([8, 6, 105].pack("ccN"))
+      connection.expects(:read_nonblock).returns([8, 6, 105].pack("ccN"))
       connection.expects(:close)
       subject.read_errors.should include(identifier: 105, error_code: 6)
     end

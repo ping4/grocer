@@ -57,7 +57,7 @@ module Grocer
     def read_errors(timeout = nil)
       read, write, err = @connection.select(timeout)
       if read && read.first
-        if error = @connection.read_noblock(6)
+        if error = @connection.read_nonblock(6)
           close
           e = error.unpack("c1c1N1")
           return { identifier: e[2], error_code: e[1], error_text: ERROR_CODES[e[1]] }
