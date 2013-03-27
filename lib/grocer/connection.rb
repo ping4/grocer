@@ -37,6 +37,11 @@ module Grocer
       ssl.select(timeout)
     end
 
+    # we are reading off a possibly closed connection - don't open it
+    def read_nonblock(size = nil, buf = nil)
+      ssl.read(size, buf) if ssl && ssl.connected?
+    end
+
     def close
       destroy_connection
     end
