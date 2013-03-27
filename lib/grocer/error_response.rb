@@ -15,7 +15,7 @@ module Grocer
 
     COMMAND = 8
 
-    attr_accessor :status_code, :identifier
+    attr_accessor :status_code, :identifier, :notification
 
     def initialize(binary_tuple)
       # C => 1 byte command
