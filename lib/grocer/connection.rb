@@ -7,7 +7,7 @@ module Grocer
     extend Forwardable
     attr_reader :certificate, :passphrase, :gateway, :port, :retries
 
-    def_delegators :ssl, :connect, :disconnect
+    def_delegators :ssl, :connect, :disconnect, :can_read?
 
     def initialize(options = {})
       @certificate = options.fetch(:certificate) { nil }

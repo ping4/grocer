@@ -57,5 +57,15 @@ module Grocer
       disconnect
       connect
     end
+
+    def can_read?(timeout=nil)
+      return unless connected?
+      if timeout
+        read_sockets, _, _ = IO.select([@ssl], [], [@ssl], timeout)
+        ! read_sockets.empty?
+      else
+        pending > 0
+      end
+    end
   end
 end

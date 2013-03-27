@@ -117,4 +117,40 @@ describe Grocer::SSLConnection do
       mock_ssl.should have_received(:read).with(42)
     end
   end
+
+  it 'does not call can_read? on ssl if the socket is not connected' do
+    #also should not raise an error
+    subject.can_read?.should be_nil
+  end
+
+  describe 'can_read?' do
+    before do
+      subject.stubs(:connected?).returns(true)
+    end
+
+    it 'blocks if a timeout is passed in - returns false if nothing available' do
+      IO.stubs(:select).returns([[],[],[]])
+      subject.should_not be_can_read(1.0)
+    end
+
+    it 'blocks if a timeout is passed in - returns true if read is available' do
+      IO.stubs(:select).returns([[mock_socket],[],[]])
+      subject.should be_can_read(1.0)
+    end
+
+    it 'does not block if no timeout is passed in - returns true if something is pending' do
+      subject.stubs(:pending).returns(6)
+      subject.should be_can_read
+    end
+
+    it 'does not block if no timeout is passed in - returns false if nothing is pending' do
+      subject.stubs(:pending).returns(0)
+      subject.should_not be_can_read
+    end
+
+    it 'does not block if nil timeout is passed in' do
+      subject.stubs(:pending).returns(0)
+      subject.should_not be_can_read(nil)
+    end
+  end
 end
