@@ -24,16 +24,28 @@ describe Grocer::Pusher do
       error.identifier.should == 105
     end
 
-    it "should return previous errors" do
-      prev_notification = stub(:to_bytes => 'abc123', :identifier= => nil, :identifier => 105)
-      subject.send(:remember_notification, prev_notification)
+    describe "with previously sent notifications" do
+      let(:prev_notification) { stub(:to_bytes => 'abc123', :identifier= => nil, :identifier => 105) }
+      before {
+        subject.send(:remember_notification, prev_notification)
+      }
 
-      error=subject.push_and_check(notification)
-      error.should_not be_nil
+      it "should return previous errors" do
+        error=subject.push_and_check(notification)
+        error.should_not be_nil
 
-      notifications = subject.send(:notification_to_retry, error)
-      error.notification.should == prev_notification
-      notifications.should == [notification]
+        notifications = subject.send(:notification_to_retry, error)
+        error.notification.should == prev_notification
+        notifications.should == [notification]
+
+        subject.should_not be_remembered_notifications
+      end
+
+      it "should clear previous errors" do
+        subject.should be_remembered_notifications
+        subject.clear_notifications
+        subject.should_not be_remembered_notifications
+      end
     end
   end
 

@@ -53,6 +53,14 @@ module Grocer
       errors
     end
 
+    def remembered_notifications?
+      !@backlog.empty?
+    end
+
+    def clear_notifications
+      @backlog.clear
+    end
+
     private
 
     def remember_notification(notification)
