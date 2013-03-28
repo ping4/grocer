@@ -6,7 +6,7 @@ describe Grocer::Connection do
   let(:connection_options) { { certificate: '/path/to/cert.pem',
                                gateway: 'push.example.com',
                                port: 443 } }
-  let(:ssl) { stub_everything('SSLConnection') }
+  let(:ssl) { stub('SSLConnection', connect: nil, new: nil, write: nil, read: nil, disconnect: nil) }
   before do
     Grocer::SSLConnection.stubs(:new).returns(ssl)
   end

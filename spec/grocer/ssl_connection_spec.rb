@@ -39,6 +39,17 @@ describe Grocer::SSLConnection do
     end
   end
 
+  describe 'configuration with a file certificate' do
+    before do
+      stub_sockets
+      connection_options[:certificate] = File.new(File.dirname(__FILE__) + '/../fixtures/example.pem')
+    end
+    it 'uses the file to load the certificate' do
+      OpenSSL::X509::Certificate.expects(:new).with(File.read(File.dirname(__FILE__) + '/../fixtures/example.pem'))
+      subject.connect
+    end
+  end
+
   subject { described_class.new(connection_options) }
 
   describe 'configuration' do
