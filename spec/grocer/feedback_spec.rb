@@ -13,7 +13,7 @@ describe Grocer::Feedback do
                returns(nil)
   end
 
-  let(:connection)   { stub_everything }
+  let(:connection)   { stub() }
   let(:jan1)         { Time.utc(2012, 1, 1) }
   let(:jan2)         { Time.utc(2012, 1, 2) }
   let(:device_token) { 'fe15a27d5df3c34778defb1f4f3880265cc52c0c047682223be59fb68500a9a2' }
