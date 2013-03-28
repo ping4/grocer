@@ -7,7 +7,7 @@ module Grocer
     extend Forwardable
     attr_reader :certificate, :passphrase, :gateway, :port, :retries
 
-    def_delegators :ssl, :connect, :disconnect
+    def_delegators :ssl, :connect, :close
 
     def initialize(options = {})
       @certificate = options.fetch(:certificate) { nil }
@@ -28,8 +28,6 @@ module Grocer
         ssl.write(content)
       end
     end
-
-    alias_method :close, :disconnect
 
     private
 
@@ -57,7 +55,7 @@ module Grocer
 
         raise unless attempts < retries
 
-        disconnect
+        close
         attempts += 1
         retry
       end

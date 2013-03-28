@@ -44,17 +44,16 @@ module Grocer
       @ssl.connect
     end
 
-    def disconnect
+    def close
       @ssl.close if @ssl
       @ssl = nil
 
       @sock.close if @sock
       @sock = nil
     end
-    alias_method :close, :disconnect
 
     def reconnect
-      disconnect
+      close
       connect
     end
   end

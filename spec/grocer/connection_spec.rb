@@ -6,7 +6,7 @@ describe Grocer::Connection do
   let(:connection_options) { { certificate: '/path/to/cert.pem',
                                gateway: 'push.example.com',
                                port: 443 } }
-  let(:ssl) { stub('SSLConnection', connect: nil, new: nil, write: nil, read: nil, disconnect: nil) }
+  let(:ssl) { stub('SSLConnection', connect: nil, new: nil, write: nil, read: nil, close: nil) }
   before do
     Grocer::SSLConnection.stubs(:new).returns(ssl)
   end
@@ -78,7 +78,7 @@ describe Grocer::Connection do
 
     it "#close" do
       subject.close
-      ssl.should have_received(:disconnect)
+      ssl.should have_received(:close)
     end
   end
 
@@ -123,6 +123,6 @@ describe Grocer::Connection do
   it "clears the connection between retries" do
     ssl.stubs(:write).raises(Errno::EPIPE).then.returns(42)
     subject.write('abc123')
-    ssl.should have_received(:disconnect)
+    ssl.should have_received(:close)
   end
 end
