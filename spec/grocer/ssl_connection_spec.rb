@@ -99,6 +99,12 @@ describe Grocer::SSLConnection do
       #calls connect twice: once for subject.connect and a second time for the subject.reconnect
       OpenSSL::SSL::SSLSocket.should have_received(:new).with(mock_socket, anything).twice
     end
+
+    it "should not connect if already connected" do
+      subject.expects(:connected?).returns(true)
+      subject.connect
+      OpenSSL::SSL::SSLSocket.should have_received(:new).never
+    end
   end
 
   describe 'writing data' do
