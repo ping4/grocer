@@ -45,7 +45,12 @@ describe Grocer::Connection do
       ssl.should have_received(:read).with(42, 'IO')
     end
 
-    it "#close delegates to open SSLConnection" do
+    it '#read_with_timeout delegates to open SSLConnection' do
+      ssl.expects(:read_with_timeout).with(42)
+      subject.read_with_timeout(42)
+    end
+
+    it "#close delegates to ssl connection" do
       subject.close
       ssl.should have_received(:close)
     end
@@ -66,6 +71,12 @@ describe Grocer::Connection do
       subject.read(42, 'IO')
       ssl.should have_received(:connect)
       ssl.should have_received(:read).with(42, 'IO')
+    end
+
+    it '#read_if_connected doesnt connect a closed connection' do
+      ssl.expects(:read_with_timeout)
+      subject.read_with_timeout(42)
+      ssl.should have_received(:connect).never
     end
   end
 

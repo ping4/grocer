@@ -115,7 +115,7 @@ describe Grocer::SSLConnection do
     end
 
     it "should not connect if already connected" do
-      subject.expects(:connected?).returns(true)
+      subject.expects(:connected?).at_least_once.returns(true)
       subject.connect
       OpenSSL::SSL::SSLSocket.should have_received(:new).never
     end
