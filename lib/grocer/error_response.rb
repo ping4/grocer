@@ -14,16 +14,26 @@ module Grocer
     }
 
     COMMAND = 8
+    LENGTH  = 6
 
     attr_accessor :status_code, :identifier
 
     def initialize(binary_tuple)
-      # C => 1 byte command
+      # C => 1 byte command (will be 1 to represent the protocol version)
       # C => 1 byte status
       # N => 4 byte identifier
       command, @status_code, @identifier = binary_tuple.unpack('CCN')
       raise InvalidFormatError unless @status_code && @identifier
       raise InvalidCommandError unless command == COMMAND
+      @created_at = Time.now
+    end
+
+    def false_alarm?
+      status_code == 0
+    end
+
+    def invalid_token?
+      status_code == 8
     end
 
     def status
