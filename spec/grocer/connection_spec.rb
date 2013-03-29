@@ -45,7 +45,7 @@ describe Grocer::Connection do
       ssl.should have_received(:read).with(42, 'IO')
     end
 
-    it "#close" do
+    it "#close delegates to open SSLConnection" do
       subject.close
       ssl.should have_received(:close)
     end
