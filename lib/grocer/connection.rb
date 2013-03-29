@@ -5,16 +5,14 @@ require 'forwardable'
 module Grocer
   class Connection
     extend Forwardable
-    attr_reader :certificate, :passphrase, :gateway, :port, :retries
+    attr_reader :retries, :ssl
 
     def_delegators :ssl, :connect, :close
+    def_delegators :ssl, :certificate, :passphrase, :gateway, :port
 
     def initialize(options = {})
-      @certificate = options.fetch(:certificate) { nil }
-      @passphrase = options.fetch(:passphrase) { nil }
-      @gateway = options.fetch(:gateway) { fail NoGatewayError }
-      @port = options.fetch(:port) { fail NoPortError }
       @retries = options.fetch(:retries) { 3 }
+      @ssl = Grocer::SSLConnection.new(options)
     end
 
     def read(size = nil, buf = nil)
@@ -30,17 +28,6 @@ module Grocer
     end
 
     private
-
-    def ssl
-      @ssl_connection ||= build_connection
-    end
-
-    def build_connection
-      Grocer::SSLConnection.new(certificate: certificate,
-                                passphrase: passphrase,
-                                gateway: gateway,
-                                port: port)
-    end
 
     def with_connection
       attempts = 1

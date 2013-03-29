@@ -18,7 +18,6 @@ describe Grocer::SSLConnection do
   let(:connection_options) {
     {
       certificate: '/path/to/cert.pem',
-      passphrase:  'abc123',
       gateway:     'gateway.push.example.com',
       port:         1234
     }
@@ -58,15 +57,30 @@ describe Grocer::SSLConnection do
     end
 
     it 'is initialized with a passphrase' do
+      connection_options[:passphrase] = 'new england clam chowder'
       expect(subject.passphrase).to eq(connection_options[:passphrase])
+    end
+
+    it 'defaults to an empty passphrase' do
+      expect(subject.passphrase).to be_nil
     end
 
     it 'is initialized with a gateway' do
       expect(subject.gateway).to eq(connection_options[:gateway])
     end
 
+    it 'requires a gateway' do
+      connection_options.delete(:gateway)
+      -> { described_class.new(connection_options) }.should raise_error(Grocer::NoGatewayError)
+    end
+
     it 'is initialized with a port' do
       expect(subject.port).to eq(connection_options[:port])
+    end
+
+    it 'requires a port' do
+      connection_options.delete(:port)
+      -> { described_class.new(connection_options) }.should raise_error(Grocer::NoPortError)
     end
   end
 

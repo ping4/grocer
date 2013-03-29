@@ -11,9 +11,10 @@ module Grocer
     attr_accessor :certificate, :passphrase, :gateway, :port
 
     def initialize(options = {})
-      options.each do |key, val|
-        send("#{key}=", val)
-      end
+      @certificate = options.fetch(:certificate) { nil }
+      @passphrase = options.fetch(:passphrase) { nil }
+      @gateway = options.fetch(:gateway) { fail NoGatewayError }
+      @port = options.fetch(:port) { fail NoPortError }
     end
 
     def connected?
@@ -45,10 +46,10 @@ module Grocer
     end
 
     def close
-      @ssl.close if @ssl
+      @ssl.close rescue nil if @ssl
       @ssl = nil
 
-      @sock.close if @sock
+      @sock.close rescue nil if @sock
       @sock = nil
     end
 

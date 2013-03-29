@@ -11,19 +11,6 @@ describe Grocer::Connection do
     Grocer::SSLConnection.stubs(:new).returns(ssl)
   end
 
-  it 'can be initialized with a certificate' do
-    expect(subject.certificate).to eq('/path/to/cert.pem')
-  end
-
-  it 'defaults to an empty passphrase' do
-    expect(subject.passphrase).to be_nil
-  end
-
-  it 'can be initialized with a passphrase' do
-    connection_options[:passphrase] = 'new england clam chowder'
-    expect(subject.passphrase).to eq('new england clam chowder')
-  end
-
   it 'defaults to 3 retries' do
     expect(subject.retries).to eq(3)
   end
@@ -31,24 +18,6 @@ describe Grocer::Connection do
   it 'can be initialized with a number of retries' do
     connection_options[:retries] = 2
     expect(subject.retries).to eq(2)
-  end
-
-  it 'requires a gateway' do
-    connection_options.delete(:gateway)
-    -> { described_class.new(connection_options) }.should raise_error(Grocer::NoGatewayError)
-  end
-
-  it 'can be initialized with a gateway' do
-    expect(subject.gateway).to eq('push.example.com')
-  end
-
-  it 'requires a port' do
-    connection_options.delete(:port)
-    -> { described_class.new(connection_options) }.should raise_error(Grocer::NoPortError)
-  end
-
-  it 'can be initialized with a port' do
-    expect(subject.port).to eq(443)
   end
 
   it 'can open the connection to the apple push notification service' do
