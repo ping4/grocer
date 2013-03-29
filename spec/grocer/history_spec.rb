@@ -1,11 +1,23 @@
 require 'spec_helper'
 require 'grocer/history'
+require 'grocer/notification'
+require 'grocer/error_response'
 
 describe Grocer::History do
   describe "empty buffer" do
     subject { tb(5) }
     it "should subject.scan" do
       test_scan subject, 4, false
+    end
+
+    it "should have nuique next_identifier" do
+      subject.send(:next_identifier).should_not == subject.send(:next_identifier)
+    end
+
+    it "should roll next_identifier when larger than max_identifier" do
+      subject.max_identifier = 100
+      subject.instance_variable_set(:@identifier, 100)
+      subject.send(:next_identifier).should == 1
     end
   end
 
@@ -121,16 +133,29 @@ describe Grocer::History do
   #create a history record prepopulated with a number of records
   def tb(capacity, num=nil)
     b = Grocer::History.new(size: capacity)
-    (1..num).each {|i| b.remember i } if num
+    (1..num).each {|i| b.remember Grocer::Notification.new(alert: i.to_s, identifier: i) } if num
     b
   end
 
   def test_scan(subject, search_id, found=true, expected_misses=[])
-    expected_id = found ? search_id : nil
 
-    misses=[]
-    subject.find_culpret(misses) {|i| i == search_id }.should == expected_id
-    misses.should == expected_misses
+    if found
+      notification = subject.history.detect {|n| n && n.identifier == search_id }
+      err = error_response(notification.identifier)
+
+      subject.find_culpret(err)#.should == err
+      err.notification.should == notification
+      err.resend.map(&:alert).should == expected_misses.map(&:to_s)
+    else
+      err = error_response(999)
+      subject.find_culpret(err).should be_nil
+      err.notification.should be_nil
+      err.resend.map(&:alert).should == expected_misses.map(&:to_s)
+    end
     subject.should be_empty
+  end
+
+  def error_response(identifier, status_code=8)
+    Grocer::ErrorResponse.new([Grocer::ErrorResponse::COMMAND, status_code, identifier].pack('CCN'))
   end
 end

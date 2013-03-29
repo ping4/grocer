@@ -17,6 +17,12 @@ module Grocer
 
     attr_accessor :status_code, :identifier
 
+    # what notification caused this error
+    attr_accessor :notification
+
+    # notifications that were not sent as a result of this error
+    attr_accessor :resend
+
     def initialize(binary_tuple)
       # C => 1 byte command
       # C => 1 byte status

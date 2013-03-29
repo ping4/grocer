@@ -4,16 +4,21 @@ module Grocer
   class History
     DEFAULT_SIZE = 100
     attr_reader :history, :lock
+    attr_accessor :identifier
+    attr_accessor :max_identifier
 
     def initialize(options)
       @lock = Mutex.new
       @size = (options[:size] || DEFAULT_SIZE) + 1
+      @max_identifier = @size << 4
       erase_history
+      @identifier = 0
     end
 
-    def remember(element)
+    def remember(notification)
       synchronize do
-        @history[@f] = element
+        notification.identifier ||= next_identifier
+        @history[@f] = notification
         @f = (@f + 1) % @size
 
         if @f == @b     #full
@@ -28,18 +33,19 @@ module Grocer
     # notifications between now and the culpret will be put into notifications
     # the culpret will be returned
     # this will remove all entries sent (the connection is closed, so we won't put any more on this socket)
-    def find_culpret(notifications=[], &block)
+    def find_culpret(error_response, &block)
+      error_response.resend ||= []
       hit    = nil
 
       synchronize do
         # handle left half of buffer for a buffer that wraps the end of the array
         if @f < @b
-          hit = simple_scan(0, notifications, &block)
+          hit = simple_scan(0, error_response, &block)
           @f = @size
         end
 
         #handle buffer front down to the back (where @f > @b or @f == @b)
-        hit ||= simple_scan(@b, notifications, &block)
+        hit ||= simple_scan(@b, error_response, &block)
         erase_history
       end
 
@@ -68,14 +74,29 @@ module Grocer
 
     private
 
-    def simple_scan(bottom, notifications=[], &block)
+    # the next identifier to assign to the notification
+    # give a little padding to ensure there is no confusion
+
+    def next_identifier
+      if @identifier >= @max_identifier
+        @identifier = 1
+      else
+        @identifier += 1
+      end
+    end
+
+
+    def simple_scan(bottom, error_response, &block)
       while @f > bottom
         @f -= 1
         cur = @history[@f]
         @history[@f] = nil
 
-        return cur if block.yield cur
-        notifications << cur
+        if error_response.identifier == cur.identifier
+          error_response.notification = cur
+          return error_response
+        end
+        error_response.resend << cur
       end
       nil
     end
