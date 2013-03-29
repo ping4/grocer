@@ -7,7 +7,7 @@ module Grocer
 
     def initialize(options)
       @lock = Mutex.new
-      @size = options.fetch(:size, DEFAULT_SIZE) + 1
+      @size = (options[:size] || DEFAULT_SIZE) + 1
       erase_history
     end
 
