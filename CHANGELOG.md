@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 0.3.5
+
+* Rename `Grocer::Connection#destroy_connection` and `Grocer::SSLConnection#disconnect` to close. added `Grocer::Pusher#close`
+  ([kbrock](https://github.com/kbrock))
+* Added `Grocer::ErrorResponse` to hold error responses
+
+
 ## 0.3.4
 
 * Add `Grocer::MobileDeviceManagementNotification` to send PushMagic tokens.
