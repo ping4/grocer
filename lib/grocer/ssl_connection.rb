@@ -45,17 +45,26 @@ module Grocer
       @ssl.connect
     end
 
+    # timeout of nil means block regardless. so just say it is ready
+    # timeout of 0 means don't block / get quick answer. so select on read and write
+    # timeout of number means block that long. so select on socket read only
+    def ready?(timeout=0)
+      if connected?
+        if timeout
+          write_arr = timeout == 0 ? [@ssl] : nil
+          read_arr, _, _ = IO.select([@ssl],write_arr,[@ssl], timeout) || [[]]
+          read_arr && read_arr.first
+        else
+          true
+        end
+      end
+    end
+
     # timeout of nil means block
     # timeout of 0 means don't block
     # timeout of number means block that long on read
     def read_with_timeout(count, timeout=nil)
-      return unless connected?
-      if timeout
-        write_arr = timeout == 0 ? [@ssl] : nil
-        read_arr, _, _ = IO.select([@ssl],write_arr,[@ssl], timeout)
-        return unless read_arr && read_arr.first
-      end
-      @ssl.read(count)
+      @ssl.read(count) if ready?(timeout)
     end
 
     def close
