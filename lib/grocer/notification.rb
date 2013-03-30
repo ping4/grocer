@@ -8,6 +8,7 @@ module Grocer
     attr_accessor :identifier, :expiry, :device_token
     attr_reader :alert, :badge, :custom, :sound
 
+    attr_accessor :created_at
     # Public: Initialize a new Grocer::Notification. You must specify at least an `alert` or `badge`.
     #
     # payload - The Hash of notification parameters and payload to be sent to APNS.:
@@ -64,6 +65,14 @@ module Grocer
       fail PayloadTooLargeError if payload_too_large?
     end
     alias_method :valid?, :validate_payload
+
+    def mark_sent
+      (@created_at||=[]) << Time.now
+    end
+
+    def inspect
+      "#<Notification #{identifier}: #{alert}>"
+    end
 
     private
 

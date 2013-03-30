@@ -41,7 +41,8 @@ describe Grocer::ErrorResponse do
     end
   end
 
-  it 'finds the status from the status code' do
-    expect(error_response.status).to eq('Processing error')
+  it 'accepts a notification' do
+    error_response.notification='x'
+    expect(error_response.notification).to eq('x')
   end
 end

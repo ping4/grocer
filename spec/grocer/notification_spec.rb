@@ -70,5 +70,9 @@ describe Grocer::Notification do
         -> { notification.to_bytes }.should raise_error(Grocer::PayloadTooLargeError)
       end
     end
+
+    it "should inspect" do
+      described_class.new.inspect.should match(/Notification/)
+    end
   end
 end
