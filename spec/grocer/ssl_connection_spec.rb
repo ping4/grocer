@@ -5,6 +5,8 @@ describe Grocer::SSLConnection do
   def stub_sockets
     TCPSocket.stubs(:new).returns(mock_socket)
     OpenSSL::SSL::SSLSocket.stubs(:new).returns(mock_ssl)
+    mock_socket.stubs('setsockopt')
+    mock_ssl.stubs('sync=')
   end
 
   def stub_certificate
@@ -12,8 +14,8 @@ describe Grocer::SSLConnection do
     File.stubs(:read).with(connection_options[:certificate]).returns(example_data)
   end
 
-  let(:mock_socket) { stub_everything }
-  let(:mock_ssl)    { stub_everything }
+  let(:mock_socket) { stub('Socket', setsockopt: nil) }
+  let(:mock_ssl)    { stub('SSLSocket', :sync= => nil, connect: nil) }
 
   let(:connection_options) {
     {
@@ -22,6 +24,8 @@ describe Grocer::SSLConnection do
       port:         1234
     }
   }
+
+  subject { described_class.new(connection_options) }
 
   describe 'configuration with pre-read certificate' do
     before do
@@ -48,8 +52,6 @@ describe Grocer::SSLConnection do
       subject.connect
     end
   end
-
-  subject { described_class.new(connection_options) }
 
   describe 'configuration' do
     it 'is initialized with a certificate' do
@@ -102,13 +104,13 @@ describe Grocer::SSLConnection do
     end
 
     it 'reconnects' do
+      mock_ssl.expects(:close)
+      mock_socket.expects(:close)
       #make sure they are available
       subject.connect
 
       subject.reconnect
       #calls close
-      mock_ssl.should have_received(:close)
-      mock_socket.should have_received(:close)
 
       #calls connect twice: once for subject.connect and a second time for the subject.reconnect
       OpenSSL::SSL::SSLSocket.should have_received(:new).with(mock_socket, anything).twice
@@ -121,31 +123,45 @@ describe Grocer::SSLConnection do
     end
   end
 
-  describe 'writing data' do
+  describe 'connected socket' do
     before do
       stub_sockets
       stub_certificate
+      subject.connect
     end
 
-    it 'writes data to the SSL connection' do
-      subject.connect
+    it 'should writes to the SSL connection' do
+      mock_ssl.expects(:write).with('abc123')
       subject.write('abc123')
+    end
 
-      mock_ssl.should have_received(:write).with('abc123')
+    it 'should read from the SSL connection' do
+      mock_ssl.expects(:read).with(42)
+      subject.read(42)
+    end
+
+    it 'should read with no timeout' do
+      mock_ssl.expects(:read).with(42)
+      subject.read_with_timeout(42)
+    end
+
+    it 'should read with no blocking' do
+      IO.expects(:select).returns([[mock_ssl],[],[]])
+      mock_ssl.expects(:read).with(42)
+      subject.read_with_timeout(42, 0)
+    end
+
+    it 'should not read with no blocking and no data' do
+      IO.expects(:select).returns([],[],[])
+      mock_ssl.expects(:read).never
+      subject.read_with_timeout(42, 0)
     end
   end
 
-  describe 'reading data' do
-    before do
-      stub_sockets
-      stub_certificate
-    end
-
-    it 'reads data from the SSL connection' do
-      subject.connect
-      subject.read(42)
-
-      mock_ssl.should have_received(:read).with(42)
+  describe 'disconnected socket' do
+    it "should not connect for read_with_timeout" do
+      mock_ssl.expects(:read).never
+      subject.read_with_timeout(42)
     end
   end
 end

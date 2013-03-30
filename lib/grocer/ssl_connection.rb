@@ -49,6 +49,7 @@ module Grocer
     # timeout of 0 means don't block
     # timeout of number means block that long on read
     def read_with_timeout(count, timeout=nil)
+      return unless connected?
       if timeout
         write_arr = timeout == 0 ? [@ssl] : nil
         read_arr, _, _ = IO.select([@ssl],write_arr,[@ssl], timeout)
