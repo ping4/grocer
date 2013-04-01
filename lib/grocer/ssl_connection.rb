@@ -53,7 +53,7 @@ module Grocer
         if timeout
           write_arr = timeout == 0 ? [@ssl] : nil
           read_arr, _, _ = IO.select([@ssl],write_arr,[@ssl], timeout) || [[]]
-          read_arr && read_arr.first
+          read_arr && !! read_arr.first
         else
           true
         end

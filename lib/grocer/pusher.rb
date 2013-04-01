@@ -47,7 +47,7 @@ module Grocer
       response
     end
 
-    def check_and_retry(errors=[], timeout=nil)
+    def check_and_retry(errors=[], timeout=0)
       if (response = read_error_and_history(timeout)) && ! response.false_alarm?
         errors << response
         push_and_retry(response.resend, errors) if response.notification || resend_on_not_found
