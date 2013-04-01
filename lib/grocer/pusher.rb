@@ -5,10 +5,14 @@ module Grocer
     extend Forwardable
 
     def_delegators :@connection, :connect, :close
+    ## send all of history if there was an error, but the identifier was not fond in history
+    attr_accessor :resend_on_not_found
+
 
     def initialize(connection, options={})
       @connection = connection
       @previous_notifications = Grocer::History.new(size: options[:size])
+      @resend_on_not_found = options[:resend_on_not_found] || false
     end
 
     def push(notification)
@@ -46,7 +50,7 @@ module Grocer
     def check_and_retry(errors=[], timeout=nil)
       if (response = read_error_and_history(timeout)) && ! response.false_alarm?
         errors << response
-        push_and_retry(response.resend, errors)
+        push_and_retry(response.resend, errors) if response.notification || resend_on_not_found
       end
       errors
     end

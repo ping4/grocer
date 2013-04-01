@@ -114,7 +114,8 @@ describe Grocer::Pusher do
   context "partial errors" do
     # NOTE: 2 is the identifier we are assuming is assigned to bad_notification.identifier
     it "#resend push for notification errors" do
-      subject.expects(:read_error).times(7).returns(false). #after 0
+      subject.expects(:read_error).times(7).
+        then.returns(false). #after 0
         then.returns(false). # after 1
         then.returns(false). # after 2
         then.returns(error_response(1)). #after 3
@@ -134,6 +135,53 @@ describe Grocer::Pusher do
       ret[0].resend.should      == [notifications[3], notifications[2]]
     end
   end
+
+  context "pusher with forgotten notifications" do
+    subject { described_class.new(connection, size: 2) }
+    it "should not resend notifications if it is not known what went out" do
+      subject.resend_on_not_found=false
+      subject.expects(:read_error).times(4).
+        then.returns(false). # after 0 (forgotten)
+        then.returns(false). # after 1
+        then.returns(false). # after 2
+        then.returns(error_response(0)) #after 3
+
+      notifications = 4.times.map { |i| Grocer::Notification.new(alert: "alert text #{i}", identifier: i) }
+
+      subject.expects(:push_out).with(notifications[0]).once
+      subject.expects(:push_out).with(notifications[1]).once
+      subject.expects(:push_out).with(notifications[2]).once
+      subject.expects(:push_out).with(notifications[3]).once
+      ret = subject.push_and_retry(notifications)
+      ret.should be_kind_of(Array)
+      ret.length.should          == 1
+      ret[0].notification.should be_nil
+      ret[0].resend.should      == [notifications[3], notifications[2]]
+    end
+    it "should send out notifications if configured to send out notifications" do
+      subject.resend_on_not_found=true
+      subject.expects(:read_error).times(6).
+        then.returns(false). # after 0 (forgotten)
+        then.returns(false). # after 1 (forgotten)
+        then.returns(false). # after 2
+        then.returns(error_response(0)). #after 3
+        then.returns(false). # after 2
+        then.returns(false) # after 3
+
+      notifications = 4.times.map { |i| Grocer::Notification.new(alert: "alert text #{i}", identifier: i) }
+
+      subject.expects(:push_out).with(notifications[0]).once
+      subject.expects(:push_out).with(notifications[1]).once
+      subject.expects(:push_out).with(notifications[2]).twice
+      subject.expects(:push_out).with(notifications[3]).twice
+      ret = subject.push_and_retry(notifications)
+      ret.should be_kind_of(Array)
+      ret.length.should          == 1
+      ret[0].notification.should be_nil
+      ret[0].resend.should      == [notifications[3], notifications[2]]
+    end
+  end
+
 
   # content "bbg" do
   # end
