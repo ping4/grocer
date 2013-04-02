@@ -11,7 +11,7 @@ module Grocer
 
     def initialize(connection, options={})
       @connection = connection
-      @previous_notifications = Grocer::History.new(history_size: options[:history_size])
+      @previous_notifications = Grocer::History.new(size: options[:history_size])
       @resend_on_not_found = options[:resend_on_not_found] || false
     end
 

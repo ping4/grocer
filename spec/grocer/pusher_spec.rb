@@ -137,7 +137,7 @@ describe Grocer::Pusher do
   end
 
   context "pusher with forgotten notifications" do
-    subject { described_class.new(connection, size: 2) }
+    subject { described_class.new(connection, history_size: 2) }
     it "should not resend notifications if it is not known what went out" do
       subject.resend_on_not_found=false
       subject.expects(:read_error).times(4).
