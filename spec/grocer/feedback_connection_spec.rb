@@ -7,12 +7,12 @@ describe Grocer::FeedbackConnection do
   let(:connection) { stub('Connection') }
 
   it 'delegates reading to the Connection' do
-    Grocer::Connection.any_instance.expects(:read).with(42, 'lolIO')
+    Grocer::SSLConnection.any_instance.expects(:read).with(42, 'lolIO')
     subject.read(42, 'lolIO')
   end
 
   it 'delegates writing to the Connection' do
-    Grocer::Connection.any_instance.expects(:write).with('Note Eye Fly')
+    Grocer::SSLConnection.any_instance.expects(:write).with('Note Eye Fly')
     subject.write('Note Eye Fly')
   end
 

@@ -1,6 +1,6 @@
 require 'delegate'
 require 'grocer/extensions/deep_symbolize_keys'
-require 'grocer/connection'
+require 'grocer/ssl_connection'
 
 module Grocer
   class FeedbackConnection < SimpleDelegator
@@ -10,7 +10,7 @@ module Grocer
 
     def initialize(options)
       options = apply_defaults(options)
-      super(Connection.new(options))
+      super(SSLConnection.new(options))
     end
 
     private

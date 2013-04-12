@@ -1,3 +1,4 @@
+require 'spec_helper'
 require 'grocer.rb'
 require 'grocer/error_response'
 

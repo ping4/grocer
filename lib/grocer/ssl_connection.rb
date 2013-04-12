@@ -8,13 +8,14 @@ module Grocer
     extend Forwardable
     def_delegators :@ssl, :write, :read
 
-    attr_accessor :certificate, :passphrase, :gateway, :port
+    attr_accessor :certificate, :passphrase, :gateway, :port, :retries
 
     def initialize(options = {})
       @certificate = options.fetch(:certificate) { nil }
       @passphrase = options.fetch(:passphrase) { nil }
       @gateway = options.fetch(:gateway) { fail NoGatewayError }
       @port = options.fetch(:port) { fail NoPortError }
+      @retries = options.fetch(:retries) { 3 }
     end
 
     def connected?
@@ -60,11 +61,26 @@ module Grocer
       end
     end
 
-    # timeout of nil means block
-    # timeout of 0 means don't block
-    # timeout of number means block that long on read
-    def read_with_timeout(count, timeout=nil)
-      @ssl.read(count) if ready?(timeout)
+    def with_retry(&block)
+      attempts = 1
+      begin
+        connect
+        block.yield self
+      rescue => e
+        if e.class == OpenSSL::SSL::SSLError && e.message =~ /certificate expired/i
+          e.extend(CertificateExpiredError)
+          raise
+        end
+        if block.arity == 2
+          raise unless block.call(nil, e)
+        else
+          raise unless attempts < retries
+        end
+
+        close
+        attempts += 1
+        retry
+      end
     end
 
     def close

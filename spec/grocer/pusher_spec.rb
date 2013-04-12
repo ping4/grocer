@@ -26,7 +26,8 @@ describe Grocer::Pusher do
 
   describe "with error available" do
     it "should return an error from read_error" do
-      connection.expects(:read_with_timeout).returns([Grocer::ErrorResponse::COMMAND, 6, 105].pack('CCN'))
+      connection.expects(:read).returns([Grocer::ErrorResponse::COMMAND, 6, 105].pack('CCN'))
+      connection.expects(:ready?).returns(true)
       connection.expects(:close)
 
       error=subject.read_error
@@ -40,7 +41,8 @@ describe Grocer::Pusher do
 
       before do
         subject.send(:remember_notification, prev_notification) #this is one that is causing the error
-        connection.expects(:read_with_timeout).returns([8, 0, 105].pack("ccN"))
+        connection.expects(:ready?).returns(true)
+        connection.expects(:read).returns([8, 0, 105].pack("ccN"))
         connection.expects(:close)
       end
 
@@ -66,7 +68,8 @@ describe Grocer::Pusher do
       end
 
       it "should return previous errors" do
-        connection.expects(:read_with_timeout).returns([8, 6, 105].pack("ccN")).then.returns(nil)
+        connection.expects(:ready?).returns(true).then.returns(false)
+        connection.expects(:read).returns([8, 6, 105].pack("ccN")).then.returns(nil)
         subject.expects(:push_out)
         connection.stubs(:close)
         subject.push(notification)
@@ -98,7 +101,8 @@ describe Grocer::Pusher do
 
   describe 'without an error' do
     before do
-      connection.expects(:read_with_timeout).returns(nil)
+      connection.expects(:ready?).returns(false)
+      connection.expects(:read).never
     end
 
     it 'should not return an error and not close the connection' do

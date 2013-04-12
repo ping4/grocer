@@ -9,6 +9,11 @@ describe Grocer::SSLConnection do
     mock_ssl.stubs('sync=')
   end
 
+  def stub_close
+    mock_socket.stubs('close')
+    mock_ssl.stubs('close')
+  end
+
   def stub_certificate
     example_data = File.read(File.dirname(__FILE__) + '/../fixtures/example.pem')
     File.stubs(:read).with(connection_options[:certificate]).returns(example_data)
@@ -121,6 +126,15 @@ describe Grocer::SSLConnection do
       subject.connect
       OpenSSL::SSL::SSLSocket.should have_received(:new).never
     end
+
+    it '#write connects SSLConnection and delegates to it' do
+      mock_ssl.expects(:connect)
+      mock_ssl.expects(:write).with('Apples to Oranges')
+
+      subject.with_retry do |connection|
+        connection.write('Apples to Oranges')
+      end
+    end
   end
 
   describe 'connected socket' do
@@ -140,28 +154,91 @@ describe Grocer::SSLConnection do
       subject.read(42)
     end
 
-    it 'should read with no timeout' do
-      mock_ssl.expects(:read).with(42)
-      subject.read_with_timeout(42)
+    it 'should be ready with no timeout' do
+      subject.ready?(nil).should be_true
     end
 
     it 'should read with no blocking' do
       IO.expects(:select).returns([[mock_ssl],[],[]])
-      mock_ssl.expects(:read).with(42)
-      subject.read_with_timeout(42, 0)
+      subject.ready?(0).should be_true
     end
 
     it 'should not read with no blocking and no data' do
       IO.expects(:select).returns([],[],[])
-      mock_ssl.expects(:read).never
-      subject.read_with_timeout(42, 0)
+      subject.ready?(0).should be_false
+    end
+
+    it '#write delegates to SSLConnection through #with_retry' do
+      mock_ssl.expects(:write).with('Apples to Oranges')
+      subject.with_retry { |c,e| c.write('Apples to Oranges') }
+    end
+
+    it 'raises CertificateExpiredError for OpenSSL::SSL::SSLError with /certificate expired/i message' do
+      mock_ssl.expects(:write).raises(OpenSSL::SSL::SSLError.new('certificate expired'))
+      -> {
+        subject.with_retry do |c|
+          c.write('abc123')
+        end
+      }.should raise_error(Grocer::CertificateExpiredError)
     end
   end
 
-  describe 'disconnected socket' do
-    it "should not connect for read_with_timeout" do
-      mock_ssl.expects(:read).never
-      subject.read_with_timeout(42)
+  describe 'retries' do
+    before do
+      stub_sockets
+      stub_certificate
+      subject.connect
+      stub_close #expects?
+    end
+
+    [SocketError, OpenSSL::SSL::SSLError, Errno::EPIPE].each do |error|
+      it "retries #write in the case of an #{error}" do
+        mock_ssl.expects(:write).twice.raises(error).then.returns(42)
+        subject.with_retry do |connection|
+          connection.write('abc123')
+        end
+      end
+
+      it 'allows user to define own retry logic/count' do
+        mock_ssl.expects(:write).times(3).raises(error).then.raises(error).then.returns(42)
+
+        subject.with_retry do |connection, exception|
+          if connection
+            connection.write('abc123')
+          else
+            true
+          end
+        end
+      end
+
+      it 'raises the error if none of the retries work' do
+        mock_ssl.expects(:write).times(3).raises(error)
+        -> {
+          subject.with_retry do |connection|
+            connection.write('abc123')
+          end
+        }.should raise_error(error)
+      end
+
+      it 'raises the error if none of the retries work' do
+        mock_ssl.expects(:write).raises(error).then.raises(error)
+        -> {
+          subject.with_retry do |connection, exception|
+            if connection
+              connection.write('abc123')
+            else
+              false
+            end
+          end
+        }.should raise_error(error)
+      end
+    end
+
+    it "clears the connection between retries" do
+      mock_ssl.expects(:write).twice.raises(Errno::EPIPE).then.returns(42)
+      subject.with_retry do |connection|
+        connection.write('abc123')
+      end
     end
   end
 end
