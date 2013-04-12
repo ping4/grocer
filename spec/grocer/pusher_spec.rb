@@ -18,6 +18,7 @@ describe Grocer::Pusher do
 
     it 'serializes a notification and sends it via the connection' do
       connection.expects(:write).with('abc123')
+      connection.expects(:with_retry).yields(connection,nil)
       notification = stub(to_bytes: 'abc123')
       subject.send(:push_out, notification)
     end

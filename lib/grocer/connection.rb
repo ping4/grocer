@@ -7,7 +7,8 @@ module Grocer
     extend Forwardable
     attr_reader :retries, :ssl
 
-    def_delegators :ssl, :connect, :close
+    def_delegators :ssl, :connect, :close, :ready?, :read, :write
+    #for tests - deprecate
     def_delegators :ssl, :certificate, :passphrase, :gateway, :port
 
     def initialize(options = {})
@@ -15,36 +16,21 @@ module Grocer
       @ssl = Grocer::SSLConnection.new(options)
     end
 
-    def read(size = nil, buf = nil)
-      with_connection do
-        ssl.read(size, buf)
-      end
-    end
-
-    def read_with_timeout(*args)
-      ssl.read_with_timeout(*args) if ssl
-    end
-
-    def write(content)
-      with_connection do
-        ssl.write(content)
-      end
-    end
-
-    private
-
-    def with_connection
-      attempts = 1
+    def with_retry(&block)
+      attempts = 1 ##
       begin
         connect
-        yield
+        block.yield ssl
       rescue => e
         if e.class == OpenSSL::SSL::SSLError && e.message =~ /certificate expired/i
           e.extend(CertificateExpiredError)
           raise
         end
-
-        raise unless attempts < retries
+        if block.arity == 2
+          raise unless block.call(nil, e)
+        else
+          raise unless attempts < retries
+        end
 
         close
         attempts += 1

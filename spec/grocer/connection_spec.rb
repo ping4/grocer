@@ -11,15 +11,6 @@ describe Grocer::Connection do
     Grocer::SSLConnection.stubs(:new).returns(ssl)
   end
 
-  it 'defaults to 3 retries' do
-    expect(subject.retries).to eq(3)
-  end
-
-  it 'can be initialized with a number of retries' do
-    connection_options[:retries] = 2
-    expect(subject.retries).to eq(2)
-  end
-
   it 'can open the connection to the apple push notification service' do
     subject.connect
     ssl.should have_received(:connect)
@@ -27,7 +18,11 @@ describe Grocer::Connection do
 
   it 'raises CertificateExpiredError for OpenSSL::SSL::SSLError with /certificate expired/i message' do
     ssl.stubs(:write).raises(OpenSSL::SSL::SSLError.new('certificate expired'))
-    -> {subject.write('abc123')}.should raise_error(Grocer::CertificateExpiredError)
+    -> {
+      subject.with_retry do |c|
+        c.write('abc123')
+      end
+    }.should raise_error(Grocer::CertificateExpiredError)
   end
 
   context 'an open SSLConnection' do
@@ -40,14 +35,19 @@ describe Grocer::Connection do
       ssl.should have_received(:write).with('Apples to Oranges')
     end
 
-    it '#read delegates to open SSLConnection' do
-      subject.read(42, 'IO')
-      ssl.should have_received(:read).with(42, 'IO')
+    it '#write delegates to open SSLConnection through with_retry' do
+      subject.with_retry { |c,e| c.write('Apples to Oranges') }
+      ssl.should have_received(:write).with('Apples to Oranges')
     end
 
-    it '#read_with_timeout delegates to open SSLConnection' do
-      ssl.expects(:read_with_timeout).with(42)
-      subject.read_with_timeout(42)
+    it '#read delegates to open SSLConnection' do
+      ssl.expects(:read).with(42)
+      subject.read(42)
+    end
+
+    it '#ready delegates to open SSLConnection' do
+      ssl.expects(:ready?)
+      subject.ready?
     end
 
     it "#close delegates to ssl connection" do
@@ -62,47 +62,60 @@ describe Grocer::Connection do
     end
 
     it '#write connects SSLConnection and delegates to it' do
-      subject.write('Apples to Oranges')
+      subject.with_retry do |connection|
+        connection.write('Apples to Oranges')
+      end
       ssl.should have_received(:connect)
       ssl.should have_received(:write).with('Apples to Oranges')
-    end
-
-    it '#read connects SSLConnection delegates to open SSLConnection' do
-      subject.read(42, 'IO')
-      ssl.should have_received(:connect)
-      ssl.should have_received(:read).with(42, 'IO')
-    end
-
-    it '#read_if_connected doesnt connect a closed connection' do
-      ssl.expects(:read_with_timeout)
-      subject.read_with_timeout(42)
-      ssl.should have_received(:connect).never
     end
   end
 
   describe 'retries' do
     [SocketError, OpenSSL::SSL::SSLError, Errno::EPIPE].each do |error|
-      it "retries #read in the case of an #{error}" do
-        ssl.stubs(:read).raises(error).then.returns(42)
-        subject.read
+      it "retries #write in the case of an #{error}" do
+        ssl.expects(:write).raises(error).then.returns(42)
+        subject.with_retry do |connection|
+          connection.write('abc123')
+        end
       end
 
-      it "retries #write in the case of an #{error}" do
-        ssl.stubs(:write).raises(error).then.returns(42)
-        subject.write('abc123')
+      it 'allows user to define own retry logic/count' do
+        ssl.expects(:write).times(3).raises(error).then.raises(error).then.returns(42)
+
+        subject.with_retry do |connection, exception|
+          if connection
+            connection.write('abc123')
+          else
+            true
+          end
+        end
       end
 
       it 'raises the error if none of the retries work' do
         connection_options[:retries] = 1
-        ssl.stubs(:read).raises(error).then.raises(error)
-        -> { subject.read }.should raise_error(error)
+        ssl.stubs(:write).raises(error).then.raises(error)
+        -> {
+          subject.with_retry do |connection, exception|
+            if connection
+              connection.write('abc123')
+            else
+              false
+            end
+          end
+        }.should raise_error(error)
       end
     end
   end
 
   it "clears the connection between retries" do
     ssl.stubs(:write).raises(Errno::EPIPE).then.returns(42)
-    subject.write('abc123')
+    subject.with_retry do |connection, exception|
+      if connection
+        connection.write('abc123')
+      else
+        true
+      end
+    end
     ssl.should have_received(:close)
   end
 end

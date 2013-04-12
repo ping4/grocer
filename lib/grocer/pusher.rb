@@ -70,7 +70,9 @@ module Grocer
     private
 
     def push_out(notification)
-      @connection.write(notification.to_bytes)
+      @connection.with_retry do |connection|
+        connection.write(notification.to_bytes)
+      end
     end
 
     def remember_notification(notification)
