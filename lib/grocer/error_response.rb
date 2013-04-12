@@ -24,11 +24,9 @@ module Grocer
     # notifications that were not sent as a result of this error
     attr_accessor :resend
 
-    def initialize(binary_tuple)
-      # C => 1 byte command (will be 1 to represent the protocol version)
-      # C => 1 byte status
-      # N => 4 byte identifier
-      command, @status_code, @identifier = binary_tuple.unpack('CCN')
+    def initialize(identifier, status_code=8, command = COMMAND)
+      @status_code = status_code
+      @identifier = identifier
       raise InvalidFormatError unless @status_code && @identifier
       raise InvalidCommandError unless command == COMMAND
       @created_at = Time.now
@@ -44,6 +42,18 @@ module Grocer
 
     def status
       STATUS_CODE_DESCRIPTIONS[status_code]
+    end
+
+    # C => 1 byte command (will be 1 to represent the protocol version)
+    # C => 1 byte status
+    # N => 4 byte identifier
+    def self.from_binary(binary_tuple)
+      command, status_code, identifier = binary_tuple.unpack('CCN')
+      new(identifier, status_code, command)
+    end
+
+    def self.read(socket)
+      ErrorResponse.from_binary(socket.read(LENGTH))
     end
   end
 end

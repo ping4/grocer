@@ -214,7 +214,7 @@ describe Grocer::Pusher do
     end
   end
 
-  def error_response(identifier, status_code=8)
-    Grocer::ErrorResponse.new([Grocer::ErrorResponse::COMMAND, status_code, identifier].pack('CCN'))
+  def error_response(identifier)
+    Grocer::ErrorResponse.new(identifier)
   end
 end

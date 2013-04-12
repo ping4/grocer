@@ -138,7 +138,6 @@ describe Grocer::History do
   end
 
   def test_scan(subject, search_id, found=true, expected_misses=[])
-
     if found
       notification = subject.history.detect {|n| n && n.identifier == search_id }
       err = error_response(notification.identifier)
@@ -155,7 +154,7 @@ describe Grocer::History do
     subject.should be_empty
   end
 
-  def error_response(identifier, status_code=8)
-    Grocer::ErrorResponse.new([Grocer::ErrorResponse::COMMAND, status_code, identifier].pack('CCN'))
+  def error_response(identifier)
+    Grocer::ErrorResponse.new(identifier)
   end
 end

@@ -32,7 +32,7 @@ module Grocer
     def read_error(timeout=0)
       if response = @connection.read_with_timeout(Grocer::ErrorResponse::LENGTH, timeout)
         close
-        Grocer::ErrorResponse.new(response)
+        Grocer::ErrorResponse.from_binary(response)
       end
     end
 
