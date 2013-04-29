@@ -23,6 +23,7 @@ module Grocer
     end
 
     def connect
+      #puts "open connected=#{connected?}"
       return if connected?
       context = OpenSSL::SSL::SSLContext.new
 
@@ -61,6 +62,11 @@ module Grocer
       end
     end
 
+    # even if ready? returns true, there can still be a closed connection
+    def read_if_ready(length, timeout=0)
+      read(length) rescue nil if ready?(timeout)
+    end
+
     def with_retry(&block)
       attempts = 1
       begin
@@ -84,6 +90,7 @@ module Grocer
     end
 
     def close
+      #puts "closing connected=#{connected?}"
       @ssl.close rescue nil if @ssl
       @ssl = nil
 

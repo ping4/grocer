@@ -20,7 +20,7 @@ module Grocer
       attempts = 1 ##
       begin
         connect
-        block.yield ssl
+        block.yield self
       rescue => e
         if e.class == OpenSSL::SSL::SSLError && e.message =~ /certificate expired/i
           e.extend(CertificateExpiredError)

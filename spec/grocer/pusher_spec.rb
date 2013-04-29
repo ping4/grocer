@@ -5,7 +5,7 @@ require 'grocer/history'
 require 'grocer/notification'
 
 describe Grocer::Pusher do
-  let(:connection) { stub('Connection') }
+  let(:connection) { stub('Connection', :read_if_ready => nil) }
   let(:notification) { stub(:to_bytes => 'abc123', :identifier= => nil, identifier: 106, mark_sent: nil) }
 
   subject { described_class.new(connection) }
@@ -26,8 +26,7 @@ describe Grocer::Pusher do
 
   describe "with error available" do
     it "should return an error from read_error" do
-      connection.expects(:read).returns([Grocer::ErrorResponse::COMMAND, 6, 105].pack('CCN'))
-      connection.expects(:ready?).returns(true)
+      connection.expects(:read_if_ready).returns([Grocer::ErrorResponse::COMMAND, 6, 105].pack('CCN'))
       connection.expects(:close)
 
       error=subject.read_error
@@ -41,8 +40,7 @@ describe Grocer::Pusher do
 
       before do
         subject.send(:remember_notification, prev_notification) #this is one that is causing the error
-        connection.expects(:ready?).returns(true)
-        connection.expects(:read).returns([8, 0, 105].pack("ccN"))
+        connection.expects(:read_if_ready).returns([8, 0, 105].pack("ccN"))
         connection.expects(:close)
       end
 
@@ -50,7 +48,7 @@ describe Grocer::Pusher do
         subject.read_error.should be_false_alarm
       end
 
-      it "should not have any retries from read_error_and_history" do
+      it "should not have any retries after clarifying the response" do
         subject.read_error_and_history.resend.should be_nil
         subject.should_not be_remembered_notifications
       end
@@ -68,12 +66,10 @@ describe Grocer::Pusher do
       end
 
       it "should return previous errors" do
-        connection.expects(:ready?).returns(true).then.returns(false)
-        connection.expects(:read).returns([8, 6, 105].pack("ccN")).then.returns(nil)
+        connection.expects(:read_if_ready).returns([8, 6, 105].pack("ccN")).then.returns(nil)
         subject.expects(:push_out)
         connection.stubs(:close)
-        subject.push(notification)
-        error=subject.read_error_and_history
+        error = subject.push(notification)
         error.should_not be_nil
 
         error.notification.should == prev_notification
@@ -83,9 +79,10 @@ describe Grocer::Pusher do
       end
 
       it "should check_and_retry and re-pushes notifications" do
-        subject.expects(:read_error).times(2).returns(error_response(105)).then.returns(nil)
+        # first is for the push, second 2 are for check_and_retry
+        subject.expects(:read_error).times(3).returns(nil).then.returns(error_response(105)).then.returns(nil)
         subject.expects(:push_out).with(notification).twice
-        subject.push(notification)
+        subject.push(notification).should be_nil
 
         error=subject.check_and_retry
         error.should_not be_empty
@@ -101,8 +98,7 @@ describe Grocer::Pusher do
 
   describe 'without an error' do
     before do
-      connection.expects(:ready?).returns(false)
-      connection.expects(:read).never
+      connection.expects(:read_if_ready).returns(nil)
     end
 
     it 'should not return an error and not close the connection' do
