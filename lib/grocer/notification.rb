@@ -19,8 +19,6 @@ module Grocer
     #           :expiry       - The Integer representing UNIX epoch date sent to APNS as the notification expiry. (default: 0)
     #           :identifier   - The arbitrary Integer sent to APNS to uniquely this notification. (default: 0)
     def initialize(payload = {})
-      @identifier = 0
-
       payload.each do |key, val|
         send("#{key}=", val)
       end
@@ -31,7 +29,7 @@ module Grocer
 
       [
         1,
-        identifier,
+        identifier||0,
         expiry_epoch_time,
         device_token_length,
         sanitized_device_token,
