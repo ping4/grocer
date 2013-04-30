@@ -64,7 +64,7 @@ module Grocer
 
     # even if ready? returns true, there can still be a closed connection
     def read_if_ready(length, timeout=0)
-      read(length) rescue nil if ready?(timeout)
+      read(length) if ready?(timeout)
     end
 
     def with_retry(&block)
@@ -77,20 +77,15 @@ module Grocer
           e.extend(CertificateExpiredError)
           raise
         end
-        if block.arity == 2
-          raise unless block.call(nil, e)
-        else
-          raise unless attempts < retries
-        end
-
+        block.call(nil, e) if block.arity == 2
         close
+        raise unless attempts < retries
         attempts += 1
         retry
       end
     end
 
     def close
-      #puts "closing connected=#{connected?}"
       @ssl.close rescue nil if @ssl
       @ssl = nil
 

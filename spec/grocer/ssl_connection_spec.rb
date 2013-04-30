@@ -221,14 +221,11 @@ describe Grocer::SSLConnection do
       end
 
       it 'raises the error if none of the retries work' do
+        subject.retries=1
         mock_ssl.expects(:write).raises(error).then.raises(error)
         -> {
-          subject.with_retry do |connection, exception|
-            if connection
-              connection.write('abc123')
-            else
-              false
-            end
+          subject.with_retry do |connection|
+            connection.write('abc123')
           end
         }.should raise_error(error)
       end

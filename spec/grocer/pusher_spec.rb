@@ -12,13 +12,13 @@ describe Grocer::Pusher do
 
   describe 'should write to connection when pushing a notification' do
     it 'pushed_out a notification when pushing' do
+      connection.expects(:with_retry).yields(connection)
       subject.expects(:push_out).with(notification)
       subject.push(notification)
     end
 
     it 'serializes a notification and sends it via the connection' do
       connection.expects(:write).with('abc123')
-      connection.expects(:with_retry).yields(connection,nil)
       notification = stub(to_bytes: 'abc123')
       subject.send(:push_out, notification)
     end
@@ -66,6 +66,7 @@ describe Grocer::Pusher do
       end
 
       it "should return previous errors" do
+        connection.expects(:with_retry).yields(connection,nil)
         connection.expects(:read_if_ready).returns([8, 6, 105].pack("ccN")).then.returns(nil)
         subject.expects(:push_out)
         connection.stubs(:close)
@@ -80,6 +81,7 @@ describe Grocer::Pusher do
 
       it "should check_and_retry and re-pushes notifications" do
         # first is for the push, second 2 are for check_and_retry
+        connection.expects(:with_retry).times(2).yields(connection,nil).then.yields(connection,nil)
         subject.expects(:read_error).times(3).returns(nil).then.returns(error_response(105)).then.returns(nil)
         subject.expects(:push_out).with(notification).twice
         subject.push(notification).should be_nil
@@ -115,6 +117,7 @@ describe Grocer::Pusher do
   context "partial errors" do
     # NOTE: 2 is the identifier we are assuming is assigned to bad_notification.identifier
     it "#resend push for notification errors" do
+      connection.expects(:with_retry).at_least_once.yields(connection,nil)
       subject.expects(:read_error).times(7).
         then.returns(false). #after 0
         then.returns(false). # after 1
@@ -140,6 +143,7 @@ describe Grocer::Pusher do
   context "pusher with forgotten notifications" do
     subject { described_class.new(connection, history_size: 2) }
     it "should not resend notifications if it is not known what went out" do
+      connection.expects(:with_retry).at_least_once.yields(connection,nil)
       subject.resend_on_not_found=false
       subject.expects(:read_error).times(4).
         then.returns(false). # after 0 (forgotten)
@@ -160,6 +164,7 @@ describe Grocer::Pusher do
       ret[0].resend.should      == [notifications[3], notifications[2]]
     end
     it "should send out notifications if configured to send out notifications" do
+      connection.expects(:with_retry).at_least_once.yields(connection,nil)
       subject.resend_on_not_found=true
       subject.expects(:read_error).times(6).
         then.returns(false). # after 0 (forgotten)
@@ -189,6 +194,7 @@ describe Grocer::Pusher do
   context "gbgbgxx" do
     # NOTE: 2 is the identifier we are assuming is assigned to bad_notification.identifier
     it "#resend push for notification errors" do
+      connection.expects(:with_retry).at_least_once.yields(connection,nil)
       subject.expects(:read_error).times(9).returns(false). #0
         then.returns(false). #1
         then.returns(false). #2 - dropped

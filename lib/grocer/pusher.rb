@@ -5,9 +5,8 @@ module Grocer
     extend Forwardable
 
     def_delegators :@connection, :connect, :close
-    ## send all of history if there was an error, but the identifier was not fond in history
+    ## if true, resend all recent notifications when the culpret notification is not found
     attr_accessor :resend_on_not_found
-
 
     def initialize(connection, options={})
       @connection = connection
@@ -17,12 +16,27 @@ module Grocer
 
     def push(notification)
       remember_notification(notification)
-      response = push_out(notification)
+
+      error_response = nil
+      @connection.with_retry do |connection, exception|
+        if connection
+          # this sometimes doesn't error, even though the connection is bad and the message is lost
+          push_out(notification)
+          # on a closed connection, read_error will throw an error, and message will be retried
+          error_response ||= read_error
+        end
+
+        if exception
+          # this is called from rescue, don't throw errors
+          error_response ||= read_error rescue nil
+          true
+        end
+      end
       notification.mark_sent
-      response ||= read_error
-      clarify_response(response)
+      clarify_response(error_response)
     end
 
+    # public
     def push_and_retry(notifications, errors=[])
       Array(notifications).each do |notification|
         response = push(notification)
@@ -32,6 +46,7 @@ module Grocer
     end
 
     # private
+    # basic read error, need to clarify to find notification
     def read_error(timeout=0)
       if response = @connection.read_if_ready(Grocer::ErrorResponse::LENGTH, timeout)
         close
@@ -44,6 +59,7 @@ module Grocer
       clarify_response(read_error(timeout))
     end
 
+    # public
     def check_and_retry(errors=[], timeout=0)
       if response = read_error(timeout)
         clarify_response(response)
@@ -69,18 +85,7 @@ module Grocer
     # send notification over the wire
     # if the connection had an error (e.g.: closed), then see if there is an error
     def push_out(notification)
-      error_response = nil
-      retries = 0
-      @connection.with_retry do |connection, exception|
-        @connection.write(notification.to_bytes) if connection
-        if exception
-          err = read_error
-          error_response ||= err
-          retries += 1
-          retries < 3
-        end
-      end
-      error_response
+      @connection.write(notification.to_bytes)
     end
 
     # lookup the notification that caused the error response
