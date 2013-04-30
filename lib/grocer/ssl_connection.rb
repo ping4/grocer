@@ -8,7 +8,7 @@ module Grocer
     extend Forwardable
     def_delegators :@ssl, :write, :read
 
-    attr_accessor :certificate, :passphrase, :gateway, :port, :retries
+    attr_accessor :certificate, :passphrase, :gateway, :port, :retries, :context
 
     def initialize(options = {})
       @certificate = options.fetch(:certificate) { nil }
@@ -25,19 +25,21 @@ module Grocer
     def connect
       #puts "open connected=#{connected?}"
       return if connected?
-      context = OpenSSL::SSL::SSLContext.new
 
-      if certificate
+      if ! context
+        self.context = OpenSSL::SSL::SSLContext.new
 
-        if certificate.respond_to?(:read)
-          cert_data = certificate.read
-          certificate.rewind if certificate.respond_to?(:rewind)
-        else
-          cert_data = File.read(certificate)
+        if certificate
+          if certificate.respond_to?(:read)
+            cert_data = certificate.read
+            certificate.rewind if certificate.respond_to?(:rewind)
+          else
+            cert_data = File.read(certificate)
+          end
+
+          context.key  = OpenSSL::PKey::RSA.new(cert_data, passphrase)
+          context.cert = OpenSSL::X509::Certificate.new(cert_data)
         end
-
-        context.key  = OpenSSL::PKey::RSA.new(cert_data, passphrase)
-        context.cert = OpenSSL::X509::Certificate.new(cert_data)
       end
 
       @sock            = TCPSocket.new(gateway, port)
