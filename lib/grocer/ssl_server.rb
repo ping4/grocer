@@ -67,3 +67,21 @@ module Grocer
     end
   end
 end
+
+
+if __FILE__ == $0
+
+  server = Grocer.server.accept { |socket|
+    socket < "hello there"
+  }
+
+  show_stopper = Proc.new {
+    puts "got signal, exiting"
+    server.close
+  }
+
+  Signal.trap "TERM", show_stopper
+  Signal.trap "INT",  show_stopper
+
+  server.accept
+end
