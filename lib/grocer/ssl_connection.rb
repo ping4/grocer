@@ -57,8 +57,9 @@ module Grocer
         if timeout
           write_arr = timeout == 0 ? [@ssl] : nil
           #TODO: if there is a connection error - handle it here?
-          read_arr, _, _ = IO.select([@ssl],write_arr,[@ssl], timeout) || [[]]
-          read_arr && !! read_arr.first
+          read_arr, _, err_arr = IO.select([@ssl],write_arr,[@ssl], timeout) || [[]]
+          puts "ready[err]: #{read_arr && read_arr.first }" if err_arr && err_arr.first
+          read_arr && read_arr.first
         else
           true
         end
