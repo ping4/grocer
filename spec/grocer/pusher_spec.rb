@@ -114,6 +114,12 @@ describe Grocer::Pusher do
     subject.inspect.should match(/Pusher/)
   end
 
+  it "should return errors and change passed in array for push_and_retry" do
+    ret2 = []
+    ret = subject.push_and_retry([], ret2)
+    ret.object_id.should == ret2.object_id
+  end
+
   context "partial errors" do
     # NOTE: 2 is the identifier we are assuming is assigned to bad_notification.identifier
     it "#resend push for notification errors" do
