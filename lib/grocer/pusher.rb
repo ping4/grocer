@@ -19,9 +19,11 @@ module Grocer
 
       error_response = nil
       @connection.with_retry do |connection, exception|
+        puts "push >>: #{connection ? "connection" : "exception"} - #{notification.alert}"
         if connection
           # this sometimes doesn't error, even though the connection is bad and the message is lost
           push_out(notification)
+          puts "push:err (#{@connection.connected? ? "connected" : "disconnected"})"
           # on a closed connection, read_error will throw an error, and message will be retried
           error_response ||= read_error
         end
@@ -38,10 +40,12 @@ module Grocer
 
     # public
     def push_and_retry(notifications, errors=[])
+      puts "par: [#{notifications.count}]"
       Array(notifications).each do |notification|
         response = push(notification)
         resend_notification(response, errors) if response #failed during push
       end
+      puts "par: [#{notifications.count}]: #{Array(notifications).map(&:identifier).join(",")}]"
       errors
     end
 
@@ -49,6 +53,7 @@ module Grocer
     # basic read error, need to clarify to find notification
     def read_error(timeout=0)
       if response = @connection.read_if_ready(Grocer::ErrorResponse::LENGTH, timeout)
+        puts "read_error"
         close
         Grocer::ErrorResponse.from_binary(response)
       end
@@ -101,8 +106,11 @@ module Grocer
 
     def resend_notification(response, errors)
       if ! response.false_alarm?
+        puts "car: err=#{response.identifier} - retrying: #{response.resend.map(&:identifier).join(",")}"
         errors << response
         push_and_retry(response.resend, errors) if response.notification || resend_on_not_found
+      else
+        puts "car: false alarm"
       end
       errors
     end

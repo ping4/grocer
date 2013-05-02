@@ -56,6 +56,7 @@ module Grocer
       if connected?
         if timeout
           write_arr = timeout == 0 ? [@ssl] : nil
+          #TODO: if there is a connection error - handle it here?
           read_arr, _, _ = IO.select([@ssl],write_arr,[@ssl], timeout) || [[]]
           read_arr && !! read_arr.first
         else
@@ -66,7 +67,12 @@ module Grocer
 
     # even if ready? returns true, there can still be a closed connection
     def read_if_ready(length, timeout=0)
-      read(length) if ready?(timeout)
+      puts "rir t: #{timeout}"
+      if ready?(timeout)
+        read(length).tap { |ret|
+          puts "rir ret: #{! ret.nil?}"
+        }
+      end
     end
 
     def with_retry(&block)

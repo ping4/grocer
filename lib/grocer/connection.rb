@@ -32,6 +32,7 @@ module Grocer
           raise unless attempts < retries
         end
 
+        puts "retrying by closing and attempting again"# ready:#{ssl.ready?}"
         close
         attempts += 1
         retry
