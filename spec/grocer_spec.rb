@@ -75,5 +75,6 @@ describe Grocer do
       end
     end
 
+    #TODO: ensure defaults for gateway and stuff work
   end
 end

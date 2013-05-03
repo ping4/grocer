@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'grocer/feedback_connection'
 
 describe Grocer::FeedbackConnection do
   subject { described_class.new(options) }
