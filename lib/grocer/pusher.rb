@@ -22,13 +22,14 @@ module Grocer
         puts "push >>: #{connection ? "connection" : "exception"} - #{notification.alert}"
         if connection
           # this sometimes doesn't error, even though the connection is bad and the message is lost
-          push_out(notification)
-          puts "push:err (#{@connection.connected? ? "connected" : "disconnected"})"
-          # on a closed connection, read_error will throw an error, and message will be retried
+          puts "push:push_out (#{@connection.connected? ? "connected" : "disconnected"})"
+          push_out(notification) unless error_response
           error_response ||= read_error
+          # on a closed connection, read_error will throw an error, and message will be retried
         end
 
         if exception
+          puts "push caught err: #{exception}"
           # this is called from rescue, don't throw errors
           error_response ||= read_error rescue nil
           true
@@ -40,12 +41,13 @@ module Grocer
 
     # public
     def push_and_retry(notifications, errors=[])
-      puts "par: [#{notifications.count}]"
+      notifications = Array(notifications)
+      puts "par: [#{notifications.size}]"
       Array(notifications).each do |notification|
         response = push(notification)
         resend_notification(response, errors) if response #failed during push
       end
-      puts "par: [#{notifications.count}]: #{Array(notifications).map(&:identifier).join(",")}]"
+      puts "par: [#{notifications.size}]: #{Array(notifications).map(&:identifier).join(",")}]"
       errors
     end
 

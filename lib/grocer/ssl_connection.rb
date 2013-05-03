@@ -69,7 +69,7 @@ module Grocer
 
     # even if ready? returns true, there can still be a closed connection
     def read_if_ready(length, timeout=0)
-      puts "rir t: #{timeout}"
+      puts "rir t: #{timeout}" unless timeout == 0
       if ready?(timeout)
         read(length).tap { |ret|
           puts "rir ret: #{! ret.nil?}"
