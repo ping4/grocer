@@ -4,8 +4,8 @@ module Grocer
   class Pusher
     extend Forwardable
 
-    def_delegators :@connection, :connect, :close
-    ## if true, resend all recent notifications when the culpret notification is not found
+    def_delegators :@connection, :connect, :close, :select
+    ## if true, resend all recent notifications when the culpret notification is not found (default: false)
     attr_accessor :resend_on_not_found
     attr_accessor :connection
 

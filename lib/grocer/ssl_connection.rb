@@ -8,7 +8,7 @@ module Grocer
     extend Forwardable
     def_delegators :@ssl, :write, :read
 
-    attr_accessor :certificate, :passphrase, :gateway, :port, :retries, :context
+    attr_accessor :certificate, :passphrase, :gateway, :port, :retries, :timeout
 
     def initialize(options = {})
       @certificate = options.fetch(:certificate) { nil }
@@ -16,6 +16,7 @@ module Grocer
       @gateway = options.fetch(:gateway) { fail NoGatewayError }
       @port = options.fetch(:port) { fail NoPortError }
       @retries = options.fetch(:retries) { 3 }
+      @timeout = options.fetch(:write_timeout) { 10 } #seconds
     end
 
     def connected?
@@ -26,8 +27,8 @@ module Grocer
       #puts "open connected=#{connected?}"
       return if connected?
 
-      if ! context
-        self.context = OpenSSL::SSL::SSLContext.new
+      if ! @context
+        @context = OpenSSL::SSL::SSLContext.new
 
         if certificate
           if certificate.respond_to?(:read)
@@ -37,14 +38,20 @@ module Grocer
             cert_data = File.read(certificate)
           end
 
-          context.key  = OpenSSL::PKey::RSA.new(cert_data, passphrase)
-          context.cert = OpenSSL::X509::Certificate.new(cert_data)
+          @context.key  = OpenSSL::PKey::RSA.new(cert_data, passphrase)
+          @context.cert = OpenSSL::X509::Certificate.new(cert_data)
         end
       end
 
+      secs      = @timeout.to_i
+      usecs     = ((@timeout - secs) * 1_000_000).to_i
+      c_timeout = [secs, usecs].pack("l_2")
+
       @sock            = TCPSocket.new(gateway, port)
       @sock.setsockopt   Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true
-      @ssl             = OpenSSL::SSL::SSLSocket.new(@sock, context)
+      @sock.setsockopt   Socket::SOL_SOCKET, Socket::SO_RCVTIMEO, c_timeout
+      @sock.setsockopt   Socket::SOL_SOCKET, Socket::SO_SNDTIMEO, c_timeout
+      @ssl             = OpenSSL::SSL::SSLSocket.new(@sock, @context)
       @ssl.sync        = true
       @ssl.connect
     end
@@ -52,21 +59,30 @@ module Grocer
     # timeout of nil means block regardless. so just say it is ready
     # timeout of 0 means don't block / get quick answer. so select on read and write
     # timeout of number means block that long. so select on socket read only
-    def ready?(timeout=0)
+    # returns: [can_read, can_write]
+    # NOTE: returns true when connection closed. read will then return nil
+    def select(read=true, write=true, timeout=0)
       if connected?
         if timeout
-          write_arr = timeout == 0 ? [@ssl] : nil
-          read_arr, _, _ = IO.select([@ssl],write_arr,[@ssl], timeout) || [[]]
-          read_arr && !! read_arr.first
+          can_read, can_write, can_err = IO.select(read ? [@ssl] : [], write ? [@ssl] : [], [@ssl], timeout)
+          raise EOFError.new("closed stream") if can_err && can_err[0]
+          [ !! can_read && !! can_read.first , !! can_write && !! can_write.first ]
         else
-          true
+          [true, true]
         end
+      else
+        [false, false]
       end
     end
 
-    # even if ready? returns true, there can still be a closed connection
+    # reads if there is an error on the socket
+    # throws an EOFError if the connection is closed
     def read_if_ready(length, timeout=0)
-      read(length) if ready?(timeout)
+      if select(true, timeout==0, timeout).first
+        ret = read(length)
+        raise EOFError.new("closed stream") unless ret
+        ret
+      end
     end
 
     def with_retry(&block)

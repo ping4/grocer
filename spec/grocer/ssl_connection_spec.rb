@@ -155,17 +155,17 @@ describe Grocer::SSLConnection do
     end
 
     it 'should be ready with no timeout' do
-      subject.ready?(nil).should be_true
+      subject.select(true, true, nil).should == [true, true]
     end
 
     it 'should read with no blocking' do
       IO.expects(:select).returns([[mock_ssl],[],[]])
-      subject.ready?(0).should be_true
+      subject.select(true, false, 0).should == [true, false]
     end
 
     it 'should not read with no blocking and no data' do
       IO.expects(:select).returns([],[],[])
-      subject.ready?(0).should be_false
+      subject.select(true, true, 0).should == [false, false]
     end
 
     it '#write delegates to SSLConnection through #with_retry' do

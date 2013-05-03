@@ -7,7 +7,7 @@ module Grocer
     extend Forwardable
     attr_reader :retries, :ssl
 
-    def_delegators :ssl, :connect, :close, :ready?, :read, :write
+    def_delegators :ssl, :connect, :close, :select, :read, :write
     #for tests - deprecate
     def_delegators :ssl, :certificate, :passphrase, :gateway, :port
 
