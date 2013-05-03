@@ -7,7 +7,7 @@ module Grocer
     extend Forwardable
     attr_reader :retries, :ssl
 
-    def_delegators :ssl, :connect, :close, :ready?, :read, :write
+    def_delegators :ssl, :connect, :close, :select, :read, :write
     #for tests - deprecate
     def_delegators :ssl, :certificate, :passphrase, :gateway, :port
 
@@ -32,7 +32,7 @@ module Grocer
           raise unless attempts < retries
         end
 
-        puts "retrying by closing and attempting again"# ready:#{ssl.ready?}"
+        puts "retrying by closing and attempting again"# ready:#{ssl.select(true,false).first}"
         close
         attempts += 1
         retry

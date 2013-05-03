@@ -4,7 +4,7 @@ module Grocer
   class Pusher
     extend Forwardable
 
-    def_delegators :@connection, :connect, :close
+    def_delegators :@connection, :connect, :close, :sync, :sync=, :select, :fsync
     ## if true, resend all recent notifications when the culpret notification is not found
     attr_accessor :resend_on_not_found
 
@@ -19,19 +19,18 @@ module Grocer
 
       error_response = nil
       @connection.with_retry do |connection, exception|
-        puts "push >>: #{connection ? "connection" : "exception"} - #{notification.alert}"
         if connection
+          puts "push >>: #{notification.alert}"
           # this sometimes doesn't error, even though the connection is bad and the message is lost
-          puts "push:push_out (#{@connection.connected? ? "connected" : "disconnected"})"
           push_out(notification) unless error_response
-          error_response ||= read_error
           # on a closed connection, read_error will throw an error, and message will be retried
+          error_response ||= read_error(0, true)
         end
 
         if exception
-          puts "push caught err: #{exception}"
+          puts "push err: #{exception} - #{notification.alert}"
           # this is called from rescue, don't throw errors
-          error_response ||= read_error rescue nil
+          error_response ||= read_error(0, false)
           true
         end
       end
@@ -53,22 +52,29 @@ module Grocer
 
     # private
     # basic read error, need to clarify to find notification
-    def read_error(timeout=0)
-      if response = @connection.read_if_ready(Grocer::ErrorResponse::LENGTH, timeout)
-        puts "read_error"
+    def read_error(timeout=0, raise_exception=false)
+      begin
+        if response = @connection.read_if_ready(Grocer::ErrorResponse::LENGTH, timeout)
+          puts "read_error"
+          close
+          Grocer::ErrorResponse.from_binary(response)
+        end
+      rescue EOFError
+        puts "read_error: error reading"
         close
-        Grocer::ErrorResponse.from_binary(response)
+        raise if raise_exception
       end
+
     end
 
     # going away
     def read_error_and_history(timeout=0)
-      clarify_response(read_error(timeout))
+      clarify_response(read_error(timeout, false))
     end
 
     # public
     def check_and_retry(errors=[], timeout=0)
-      if response = read_error(timeout)
+      if response = read_error(timeout, false)
         clarify_response(response)
         resend_notification(response, errors)
       end
