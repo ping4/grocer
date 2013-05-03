@@ -53,15 +53,16 @@ module Grocer
     # timeout of 0 means don't block / get quick answer. so select on read and write
     # timeout of number means block that long. so select on socket read only
     def ready?(timeout=0)
+      select(true, timeout == 0, timeout).first
+    end
+
+    def select(read=true, write=false, timeout=0)
       if connected?
         if timeout
-          write_arr = timeout == 0 ? [@ssl] : nil
-          #TODO: if there is a connection error - handle it here?
-          read_arr, _, err_arr = IO.select([@ssl],write_arr,[@ssl], timeout) || [[]]
-          puts "ready[err]: #{read_arr && read_arr.first }" if err_arr && err_arr.first
-          read_arr && read_arr.first
+          can_read, can_write, can_err = IO.select(read ? [@ssl] : [], write ? [@ssl] : [], [@ssl], timeout)
+          [ can_read && !! can_read.first , can_write && !! can_write.first ]
         else
-          true
+          [true, true]
         end
       end
     end
