@@ -7,6 +7,7 @@ module Grocer
     def_delegators :@connection, :connect, :close
     ## if true, resend all recent notifications when the culpret notification is not found
     attr_accessor :resend_on_not_found
+    attr_accessor :connection
 
     def initialize(connection, options={})
       @connection = connection

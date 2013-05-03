@@ -4,6 +4,7 @@ module Grocer
   class Feedback
     include Enumerable
 
+    attr_accessor :connection
     def initialize(connection)
       @connection = connection
     end
