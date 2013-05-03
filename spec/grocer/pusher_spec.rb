@@ -49,7 +49,8 @@ describe Grocer::Pusher do
       end
 
       it "should not have any retries after clarifying the response" do
-        subject.read_error_and_history.resend.should be_nil
+        subject.should be_remembered_notifications
+        subject.send(:clarify_response, subject.read_error).resend.should be_nil
         subject.should_not be_remembered_notifications
       end
 
@@ -68,7 +69,6 @@ describe Grocer::Pusher do
       it "should return previous errors" do
         connection.expects(:with_retry).yields(connection,nil)
         connection.expects(:read_if_ready).returns([8, 6, 105].pack("ccN")).then.returns(nil)
-        subject.expects(:push_out)
         connection.stubs(:close)
         error = subject.push(notification)
         error.should_not be_nil
@@ -125,18 +125,18 @@ describe Grocer::Pusher do
     it "#resend push for notification errors" do
       connection.expects(:with_retry).at_least_once.yields(connection,nil)
       subject.expects(:read_error).times(7).
-        then.returns(false). #after 0
-        then.returns(false). # after 1
-        then.returns(false). # after 2
-        then.returns(error_response(1)). #after 3
-        then.returns(false) #fter 3, 2, 5
+        then.returns(false). #before 0
+        then.returns(false). # before 1
+        then.returns(false). # before 2
+        then.returns(error_response(1)). #before 3
+        then.returns(false) #before 3, 2, 5
 
       notifications = 5.times.map { |i| Grocer::Notification.new(alert: "alert text #{i}", identifier: i) }
 
       subject.expects(:push_out).with(notifications[0]).once
       subject.expects(:push_out).with(notifications[1]).once
       subject.expects(:push_out).with(notifications[2]).twice
-      subject.expects(:push_out).with(notifications[3]).twice # first time return error on 2: [1]
+      subject.expects(:push_out).with(notifications[3]).once # first time before sending - return error on 2: [1]
       subject.expects(:push_out).with(notifications[4]).once
       ret = subject.push_and_retry(notifications)
       ret.should be_kind_of(Array)
@@ -152,17 +152,16 @@ describe Grocer::Pusher do
       connection.expects(:with_retry).at_least_once.yields(connection,nil)
       subject.resend_on_not_found=false
       subject.expects(:read_error).times(4).
-        then.returns(false). # after 0 (forgotten)
-        then.returns(false). # after 1
-        then.returns(false). # after 2
-        then.returns(error_response(0)) #after 3
+        then.returns(false). # before 0 (forgotten)
+        then.returns(false). # before 1
+        then.returns(false). # before 2
+        then.returns(error_response(0)) #before 3
 
       notifications = 4.times.map { |i| Grocer::Notification.new(alert: "alert text #{i}", identifier: i) }
 
       subject.expects(:push_out).with(notifications[0]).once
       subject.expects(:push_out).with(notifications[1]).once
       subject.expects(:push_out).with(notifications[2]).once
-      subject.expects(:push_out).with(notifications[3]).once
       ret = subject.push_and_retry(notifications)
       ret.should be_kind_of(Array)
       ret.length.should          == 1
@@ -173,19 +172,19 @@ describe Grocer::Pusher do
       connection.expects(:with_retry).at_least_once.yields(connection,nil)
       subject.resend_on_not_found=true
       subject.expects(:read_error).times(6).
-        then.returns(false). # after 0 (forgotten)
-        then.returns(false). # after 1 (forgotten)
-        then.returns(false). # after 2
-        then.returns(error_response(0)). #after 3
-        then.returns(false). # after 2
-        then.returns(false) # after 3
+        then.returns(false). # before 0 (forgotten)
+        then.returns(false). # before 1 (forgotten)
+        then.returns(false). # before 2
+        then.returns(error_response(0)). #before 3
+        then.returns(false). # before 2
+        then.returns(false) # before 3
 
       notifications = 4.times.map { |i| Grocer::Notification.new(alert: "alert text #{i}", identifier: i) }
 
       subject.expects(:push_out).with(notifications[0]).once
       subject.expects(:push_out).with(notifications[1]).once
       subject.expects(:push_out).with(notifications[2]).twice
-      subject.expects(:push_out).with(notifications[3]).twice
+      subject.expects(:push_out).with(notifications[3]).once
       ret = subject.push_and_retry(notifications)
       ret.should be_kind_of(Array)
       ret.length.should          == 1
@@ -202,21 +201,21 @@ describe Grocer::Pusher do
     it "#resend push for notification errors" do
       connection.expects(:with_retry).at_least_once.yields(connection,nil)
       subject.expects(:read_error).times(9).returns(false). #0
-        then.returns(false). #1
-        then.returns(false). #2 - dropped
-        then.returns(error_response(1)). #3 - dropped
-        then.returns(false). #3
-        then.returns(false). #2 - dropped
-        then.returns(error_response(3)). #4 - dropped
-        then.returns(false) #4, #2
+        then.returns(false). #before 1
+        then.returns(false). #before 2 - dropped
+        then.returns(error_response(1)). #before 3 - dropped
+        then.returns(false). #before 3
+        then.returns(false). #before 2 - dropped
+        then.returns(error_response(3)). #before 4 - dropped
+        then.returns(false) #before 4, 2
 
       notifications = 5.times.map { |i| Grocer::Notification.new(alert: "alert text #{i}", identifier: i) }
 
       subject.expects(:push_out).with(notifications[0]).once
       subject.expects(:push_out).with(notifications[1]).once
       subject.expects(:push_out).with(notifications[2]).times(3)
-      subject.expects(:push_out).with(notifications[3]).twice
-      subject.expects(:push_out).with(notifications[4]).twice
+      subject.expects(:push_out).with(notifications[3]).once
+      subject.expects(:push_out).with(notifications[4]).once
       ret = subject.push_and_retry(notifications)
       ret.should be_kind_of(Array)
       ret.length.should          == 2

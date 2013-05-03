@@ -21,15 +21,14 @@ module Grocer
       error_response = nil
       @connection.with_retry do |connection, exception|
         if connection
-          # this sometimes doesn't error, even though the connection is bad and the message is lost
-          push_out(notification)
-          # on a closed connection, read_error will throw an error, and message will be retried
-          error_response ||= read_error
+          error_response ||= read_error(0, true)
+          #if we write before reading, we often block
+          push_out(notification) unless error_response
         end
 
         if exception
-          # this is called from rescue, don't throw errors
-          error_response ||= read_error rescue nil
+          # this is called from the rescue block, don't throw errors
+          error_response ||= read_error
           true
         end
       end
@@ -48,16 +47,16 @@ module Grocer
 
     # private
     # basic read error, need to clarify to find notification
-    def read_error(timeout=0)
-      if response = @connection.read_if_ready(Grocer::ErrorResponse::LENGTH, timeout)
+    def read_error(timeout=0, raise_exception=false)
+      begin
+        if response = @connection.read_if_ready(Grocer::ErrorResponse::LENGTH, timeout)
+          close
+          Grocer::ErrorResponse.from_binary(response)
+        end
+      rescue EOFError
         close
-        Grocer::ErrorResponse.from_binary(response)
+        raise if raise_exception
       end
-    end
-
-    # going away
-    def read_error_and_history(timeout=0)
-      clarify_response(read_error(timeout))
     end
 
     # public
