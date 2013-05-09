@@ -11,7 +11,8 @@ module Grocer
       @lock = Mutex.new
       @size = (options[:size] || DEFAULT_SIZE) + 1
       @max_identifier = @size << 4
-      erase_history
+      @history = Array.new(@size)
+      @f = @b = 0
       @identifier = 0
     end
 
@@ -38,9 +39,10 @@ module Grocer
       hit    = nil
 
       synchronize do
-        # handle left half of buffer for a buffer that wraps the end of the array
+        # handle left half of buffer for a buffer that wraps the ends of the array
         if @f < @b
           hit = simple_scan(0, error_response, &block)
+          #wrapped below bottom, go to right hand side
           @f = @size
         end
 
@@ -102,7 +104,13 @@ module Grocer
     end
 
     def erase_history
-      @history = Array.new(@size)
+      #may be cheaper to just allocate a new array
+      # infinite loop if @f == @size
+      @f = @f % @size
+      while @f != @b
+        @history[@b] = nil
+        @b = (@b + 1) % @size
+      end
       @f = @b = 0
     end
 
