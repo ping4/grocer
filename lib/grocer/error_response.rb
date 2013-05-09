@@ -51,9 +51,5 @@ module Grocer
       command, status_code, identifier = binary_tuple.unpack('CCN')
       new(identifier, status_code, command)
     end
-
-    def self.read(socket)
-      ErrorResponse.from_binary(socket.read(LENGTH))
-    end
   end
 end
