@@ -6,7 +6,7 @@ module Grocer
     MAX_PAYLOAD_SIZE = 256
 
     attr_accessor :identifier, :expiry, :device_token
-    attr_reader :alert, :badge, :custom, :sound
+    attr_reader :alert, :badge, :custom, :sound, :content_available
 
     attr_accessor :created_at
     # Public: Initialize a new Grocer::Notification. You must specify at least an `alert` or `badge`.
@@ -63,6 +63,10 @@ module Grocer
       @content_available = 1
       @encoded_payload = nil
     end
+    
+    def content_available?
+      !!content_available
+    end
 
     def validate_payload
       fail NoPayloadError unless alert || badge || custom
@@ -89,6 +93,7 @@ module Grocer
       aps_hash[:alert] = alert if alert
       aps_hash[:badge] = badge if badge
       aps_hash[:sound] = sound if sound
+      aps_hash[:'content-available'] = content_available if content_available?
 
       { aps: aps_hash }.merge(custom || { })
     end
