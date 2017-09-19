@@ -18,6 +18,7 @@ module Grocer
     #           :sound        - The String representing the sound portion of the payload. (optional)
     #           :expiry       - The Integer representing UNIX epoch date sent to APNS as the notification expiry. (default: 0)
     #           :identifier   - The arbitrary Integer sent to APNS to uniquely this notification. (default: 0)
+    #           :content-available
     def initialize(payload = {})
       payload.each do |key, val|
         send("#{key}=", val)
@@ -55,6 +56,11 @@ module Grocer
 
     def sound=(sound)
       @sound = sound
+      @encoded_payload = nil
+    end
+
+    def content_available=(content_available)
+      @content_available = 1
       @encoded_payload = nil
     end
 
