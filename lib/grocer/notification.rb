@@ -79,8 +79,7 @@ module Grocer
     end
 
     def inspect
-      "TESTINSPECT"
-      #{}"#<Notification #{identifier}: #{alert}>"
+      "#<Notification #{identifier}: #{alert}>"
     end
 
     private
