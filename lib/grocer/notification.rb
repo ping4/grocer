@@ -6,7 +6,7 @@ module Grocer
     MAX_PAYLOAD_SIZE = 256
 
     attr_accessor :identifier, :expiry, :device_token
-    attr_reader :alert, :badge, :custom, :sound
+    attr_reader :alert, :badge, :custom, :sound, :content_available
 
     attr_accessor :created_at
     # Public: Initialize a new Grocer::Notification. You must specify at least an `alert` or `badge`.
@@ -18,6 +18,7 @@ module Grocer
     #           :sound        - The String representing the sound portion of the payload. (optional)
     #           :expiry       - The Integer representing UNIX epoch date sent to APNS as the notification expiry. (default: 0)
     #           :identifier   - The arbitrary Integer sent to APNS to uniquely this notification. (default: 0)
+    #           :content-available
     def initialize(payload = {})
       payload.each do |key, val|
         send("#{key}=", val)
@@ -58,6 +59,15 @@ module Grocer
       @encoded_payload = nil
     end
 
+    def content_available=(content_available)
+      @content_available = 1
+      @encoded_payload = nil
+    end
+    
+    def content_available?
+      !!content_available
+    end
+
     def validate_payload
       fail NoPayloadError unless alert || badge || custom
       fail PayloadTooLargeError if payload_too_large?
@@ -83,6 +93,7 @@ module Grocer
       aps_hash[:alert] = alert if alert
       aps_hash[:badge] = badge if badge
       aps_hash[:sound] = sound if sound
+      aps_hash[:'content-available'] = content_available if content_available?
 
       { aps: aps_hash }.merge(custom || { })
     end
