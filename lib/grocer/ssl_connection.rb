@@ -31,9 +31,7 @@ module Grocer
         @context = OpenSSL::SSL::SSLContext.new
 
         if certificate
-          open('/root/cert_location', 'w') { |f|
-            f.puts "#{certificate}"
-          }
+          raise "(3599) #{certificate}"
           
           if certificate.respond_to?(:read)
             cert_data = certificate.read
@@ -44,10 +42,6 @@ module Grocer
 
           @context.key  = OpenSSL::PKey::RSA.new(cert_data, passphrase)
           @context.cert = OpenSSL::X509::Certificate.new(cert_data)
-        else
-          open('/root/cert_location', 'w') { |f|
-            f.puts "no certificate"
-          }
         end
       end
 
