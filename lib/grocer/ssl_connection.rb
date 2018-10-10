@@ -26,7 +26,9 @@ module Grocer
     def connect
       #puts "open connected=#{connected?}"
       return if connected?
-
+      
+      puts "4kk3"
+      
       if ! @context
         @context = OpenSSL::SSL::SSLContext.new
 
